@@ -1,0 +1,43 @@
+---
+import { site } from "@/config/site";
+---
+
+<footer class="site-footer no-print">
+  <div class="shell footer-inner">
+    <p class="footer-note">
+      © {new Date().getFullYear()} {site.author.name} · {site.license.content} · 代码 {site.license.code}
+    </p>
+    <p class="footer-meta">
+      <a href="/rss.xml">RSS</a>
+      <span aria-hidden="true">·</span>
+      <span>Astro + Cloudflare</span>
+    </p>
+  </div>
+</footer>
+
+<style is:global>
+  .site-footer {
+    margin-top: 5rem;
+    border-top: 1px solid var(--hairline);
+    color: var(--fg-faint);
+  }
+
+  .footer-inner {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding-block: 1.6rem;
+    font-size: 0.85rem;
+  }
+
+  .footer-meta {
+    display: flex;
+    gap: 0.45rem;
+    margin: 0;
+  }
+
+  .footer-note {
+    margin: 0;
+  }
+</style>

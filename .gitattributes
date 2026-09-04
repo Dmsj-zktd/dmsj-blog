@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.md text
+*.astro text
+*.ts text
+*.vue text
+*.css text
+*.sql text

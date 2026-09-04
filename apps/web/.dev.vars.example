@@ -1,0 +1,19 @@
+# 复制为 .dev.vars（gitignore）后填写本地值
+ENVIRONMENT=development
+IP_SALT=change-me-local-only
+
+# GitHub OAuth App（生产必须配置）
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+ALLOWED_GITHUB_LOGIN=your-github-login
+
+# 仓库信息（生产覆盖 site.config.ts 占位）
+REPO_OWNER=your-github-login
+REPO_NAME=dmsj-blog
+REPO_BRANCH=main
+
+# 生产站点 URL，用于 OAuth 回调与安全判断
+SITE_URL=https://dmsj-blog.pages.dev
+
+# 可选 Cloudflare Turnstile
+TURNSTILE_SECRET_KEY=

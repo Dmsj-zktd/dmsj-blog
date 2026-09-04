@@ -1,0 +1,27 @@
+{
+  "name": "dmsj-blog",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.16.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @dmsj/web dev",
+    "dev:admin": "pnpm --filter @dmsj/admin dev",
+    "build": "pnpm --filter @dmsj/admin build && pnpm --filter @dmsj/web build",
+    "check": "pnpm -r check",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "pnpm -r test",
+    "test:e2e": "playwright test --config apps/web/playwright.config.ts",
+    "preview": "pnpm --filter @dmsj/web preview"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.4.1",
+    "biome": "^0.3.3",
+    "typescript": "6.0.0-beta"
+  }
+}

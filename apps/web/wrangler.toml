@@ -1,0 +1,14 @@
+name = "dmsj-blog"
+compatibility_date = "2026-08-01"
+pages_build_output_dir = "./dist"
+
+# 上线前把占位 database_id / id 换成你账号下真实资源。
+d1_databases = [
+  { binding = "DB", database_name = "dmsj-blog-db", database_id = "00000000-0000-0000-0000-000000000000", migrations_dir = "./drizzle" }
+]
+kv_namespaces = [
+  { binding = "SESSION", id = "00000000000000000000000000000000" }
+]
+
+[vars]
+ENVIRONMENT = "development"

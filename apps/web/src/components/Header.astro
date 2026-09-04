@@ -1,0 +1,280 @@
+---
+import { site } from "@/config/site";
+import { contentModules } from "@/site/content-registry";
+import { themes } from "@/site/themes";
+
+const domainNav = contentModules
+  .filter((m) => m.inNav)
+  .sort((a, b) => a.order - b.order);
+---
+
+<header class="site-header no-print">
+  <div class="shell header-inner">
+    <a class="brand" href="/" aria-label={`${site.name} 首页`}>
+      <span class="brand-mark" aria-hidden="true">D</span>
+      <span class="brand-name">{site.shortName}</span>
+    </a>
+
+    <nav class="desktop-nav" aria-label="主导航">
+      <a class="nav-link" href="/">首页</a>
+      {domainNav.map((m) => (
+        <a class="nav-link" href={`/${m.key}/`}>{m.label}</a>
+      ))}
+      <a class="nav-link" href="/archive/">归档</a>
+      <a class="nav-link" href="/tags/">标签</a>
+      <a class="nav-link" href="/search/">搜索</a>
+      <a class="nav-link" href="/about/">关于</a>
+    </nav>
+
+    <details class="theme-picker no-print">
+      <summary class="theme-summary" aria-label="主题与外观设置">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M12 3a9 9 0 1 0 0 18c.8 0 1.2-.7.7-1.2-.8-.8-.6-2.1.4-2.7a4.8 4.8 0 0 0 2.4-4.2c0-2.2-1.7-4.4-4.1-4.9" />
+          <circle cx="18.5" cy="5.5" r="1" fill="currentColor" stroke="none" />
+          <circle cx="6.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+          <circle cx="7" cy="17" r="1" fill="currentColor" stroke="none" />
+        </svg>
+      </summary>
+      <div class="theme-pop">
+        <p class="eyebrow">主题 Theme</p>
+        <div class="theme-list">
+          {themes.map((theme) => (
+            <button type="button" data-action="set-theme" data-value={theme.id} class="theme-item">
+              <span class="theme-dot" data-dot={theme.id} aria-hidden="true"></span>
+              <span>{theme.name}</span>
+            </button>
+          ))}
+        </div>
+        <p class="eyebrow">模式 Mode</p>
+        <div class="mode-list">
+          <button type="button" data-action="set-mode" data-value="light">浅色</button>
+          <button type="button" data-action="set-mode" data-value="dark">深色</button>
+        </div>
+        <p class="theme-hint">未自选时每次访问随机获得主题。</p>
+      </div>
+    </details>
+
+    <details class="mobile-menu no-print">
+      <summary aria-label="打开菜单">菜单</summary>
+      <nav aria-label="移动端导航">
+        <a href="/">首页</a>
+        {domainNav.map((m) => (
+          <a href={`/${m.key}/`}>{m.label}</a>
+        ))}
+        <a href="/archive/">归档</a>
+        <a href="/tags/">标签</a>
+        <a href="/search/">搜索</a>
+        <a href="/about/">关于</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<style is:global>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg) 86%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-height: 3.6rem;
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.45rem;
+    text-decoration: none;
+    color: var(--fg);
+    font-family: var(--font-display);
+    font-weight: 750;
+    letter-spacing: 0.02em;
+  }
+
+  .brand:hover {
+    color: var(--accent);
+  }
+
+  .brand-mark {
+    display: grid;
+    place-items: center;
+    width: 1.65rem;
+    height: 1.65rem;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 2px;
+    font-size: 0.95rem;
+    align-self: center;
+  }
+
+  .desktop-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    margin-inline-start: auto;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .nav-link {
+    color: var(--fg-soft);
+    font-size: 0.9rem;
+    padding: 0.35rem 0.55rem;
+    border-radius: var(--radius);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .nav-link:hover {
+    color: var(--fg);
+    background: var(--accent-soft);
+    text-decoration: none;
+  }
+
+  .theme-picker {
+    position: relative;
+    margin-inline-start: 0.35rem;
+  }
+
+  .theme-summary {
+    list-style: none;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    color: var(--fg-soft);
+  }
+
+  .theme-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .theme-summary:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .theme-pop {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.4rem);
+    width: 15rem;
+    background: var(--bg-elev);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    padding: 0.85rem;
+    z-index: 60;
+  }
+
+  .theme-list,
+  .mode-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-block: 0.35rem 0.6rem;
+  }
+
+  .theme-item,
+  .mode-list button {
+    border: 1px solid var(--hairline);
+    background: transparent;
+    color: var(--fg);
+    border-radius: 999px;
+    padding: 0.18rem 0.6rem;
+    cursor: pointer;
+    font-size: 0.82rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .theme-item:hover,
+  .mode-list button:hover {
+    border-color: var(--accent);
+  }
+
+  .theme-dot {
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+  }
+
+  .theme-dot[data-dot="paper"] { background: #e6a15f; }
+  .theme-dot[data-dot="gothic"] { background: #2a2a2a; }
+  .theme-dot[data-dot="blueprint"] { background: #3b7dd8; }
+  .theme-dot[data-dot="telegraph"] { background: #7aa87c; }
+  .theme-dot[data-dot="terminal"] { background: #35c05a; }
+
+  .theme-hint {
+    margin: 0.5rem 0 0;
+    font-size: 0.72rem;
+    color: var(--fg-faint);
+  }
+
+  .mobile-menu {
+    display: none;
+    margin-inline-start: auto;
+  }
+
+  .mobile-menu summary {
+    list-style: none;
+    cursor: pointer;
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    padding: 0.3rem 0.65rem;
+    color: var(--fg);
+    font-size: 0.9rem;
+  }
+
+  .mobile-menu summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .mobile-menu nav {
+    position: absolute;
+    right: var(--page-pad);
+    top: calc(100% + 0.4rem);
+    background: var(--bg-elev);
+    border: 1px solid var(--hairline);
+    box-shadow: var(--shadow);
+    border-radius: 6px;
+    padding: 0.5rem;
+    display: grid;
+    min-width: 12rem;
+    z-index: 70;
+  }
+
+  .mobile-menu nav a {
+    color: var(--fg);
+    text-decoration: none;
+    padding: 0.4rem 0.7rem;
+    border-radius: var(--radius);
+  }
+
+  .mobile-menu nav a:hover {
+    background: var(--accent-soft);
+  }
+
+  @media (max-width: 960px) {
+    .desktop-nav,
+    .theme-picker {
+      display: none;
+    }
+    .mobile-menu {
+      display: block;
+      position: relative;
+    }
+  }
+</style>

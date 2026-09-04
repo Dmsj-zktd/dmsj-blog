@@ -1,0 +1,27 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { site } from "@/config/site";
+import { ui } from "@/i18n/zh-CN";
+---
+
+<BaseLayout title={ui.about.title}>
+  <article class="shell page-wrap article">
+    <p class="eyebrow">About</p>
+    <h1>{ui.about.title}</h1>
+    <p>
+      你好，我是 <strong>{site.author.name}</strong>。这里记录我在
+      算法、嵌入式系统与 LLM/Agent 工程实践中的经验、踩坑与思考。
+    </p>
+    <p>{site.author.bio}</p>
+    <h2>这个站怎么用</h2>
+    <ul>
+      <li>文章按内容域组织，可用标签与站内搜索快速定位；</li>
+      <li>所有文章正文保留在 Git 仓库，便于溯源与修订；</li>
+      <li>代码仓库公开，欢迎通过评论或 GitHub 讨论交流。</li>
+    </ul>
+    <h2>许可</h2>
+    <p>
+      文章正文采用 {site.license.content}；站点代码采用 {site.license.code}。
+    </p>
+  </article>
+</BaseLayout>

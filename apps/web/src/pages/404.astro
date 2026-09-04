@@ -1,0 +1,20 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { ui } from "@/i18n/zh-CN";
+---
+
+<BaseLayout title={ui.notFound.title} noindex>
+  <div class="shell page-wrap notfound">
+    <p class="eyebrow">404</p>
+    <h1>{ui.notFound.title}</h1>
+    <p class="muted">{ui.notFound.description}</p>
+    <a class="btn btn--accent" href="/">{ui.notFound.backHome}</a>
+  </div>
+</BaseLayout>
+
+<style is:global>
+  .notfound {
+    text-align: center;
+    padding-block: 5rem;
+  }
+</style>

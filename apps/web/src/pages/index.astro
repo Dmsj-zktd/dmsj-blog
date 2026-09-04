@@ -1,0 +1,149 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import ArticleCard from "@/components/ArticleCard.astro";
+import { site } from "@/config/site";
+import { contentModules } from "@/site/content-registry";
+import { getPublishedPosts } from "@/lib/posts";
+
+const posts = await getPublishedPosts();
+const latest = posts.slice(0, 8);
+const modulesWithCounts = contentModules
+  .filter((m) => m.public)
+  .map((m) => ({
+    module: m,
+    count: posts.filter((p) => p.domain === m.key).length,
+  }))
+  .sort((a, b) => a.module.order - b.module.order);
+---
+
+<BaseLayout title={`${site.name}`} description={site.description}>
+  <section class="shell hero">
+    <p class="eyebrow">{site.tagline}</p>
+    <h1>
+      把<em>踩过的坑</em>写成可复用的知识
+    </h1>
+    <p class="hero-lead">
+      {site.description}
+    </p>
+  </section>
+
+  <section class="shell section-block">
+    <div class="section-head">
+      <h2 class="section-title">最近更新</h2>
+      <a class="btn" href="/archive/">全部归档</a>
+    </div>
+    <div class="post-grid">
+      {latest.map((post) => <ArticleCard post={post} />)}
+    </div>
+  </section>
+
+  <section class="shell section-block">
+    <div class="section-head">
+      <h2 class="section-title">按内容域浏览</h2>
+    </div>
+    <div class="module-grid">
+      {modulesWithCounts.map(({ module, count }) => (
+        <a class="module-card surface" href={`/${module.key}/`}>
+          <span class="eyebrow">{module.key}</span>
+          <strong>{module.label}</strong>
+          <span class="module-desc">{module.description}</span>
+          <span class="module-count">{count} 篇</span>
+        </a>
+      ))}
+    </div>
+  </section>
+</BaseLayout>
+
+<style is:global>
+  .hero {
+    padding-block: clamp(3rem, 8vw, 5.5rem) clamp(2rem, 5vw, 3.5rem);
+    max-width: 54rem;
+  }
+
+  .hero h1 {
+    margin: 0.7rem 0 0.8rem;
+    font-family: var(--font-display);
+    font-weight: 720;
+    font-size: clamp(1.9rem, 5vw, 3.1rem);
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+  }
+
+  .hero h1 em {
+    color: var(--accent);
+    font-style: normal;
+    text-decoration: underline;
+    text-decoration-thickness: 0.15em;
+    text-underline-offset: 0.16em;
+    text-decoration-color: var(--hairline);
+  }
+
+  .hero-lead {
+    max-width: 42rem;
+    color: var(--fg-soft);
+    font-size: 1.06rem;
+  }
+
+  .section-block {
+    padding-block: 1.4rem;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-block-end: 1rem;
+  }
+
+  .section-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 720;
+  }
+
+  .post-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr));
+    gap: 1rem;
+  }
+
+  .module-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: 0.9rem;
+  }
+
+  .module-card {
+    padding: 1.1rem;
+    display: grid;
+    gap: 0.35rem;
+    text-decoration: none;
+    color: var(--fg);
+    transition: transform 150ms ease, border-color 150ms ease;
+  }
+
+  .module-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+  }
+
+  .module-card strong {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+  }
+
+  .module-desc {
+    color: var(--fg-soft);
+    font-size: 0.88rem;
+    line-height: 1.6;
+  }
+
+  .module-count {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--fg-faint);
+    margin-block-start: 0.4rem;
+  }
+</style>

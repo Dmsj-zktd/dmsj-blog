@@ -1,0 +1,14 @@
+packages:
+  - "apps/*"
+
+onlyBuiltDependencies:
+  - esbuild
+  - workerd
+  - "@biomejs/biome"
+
+allowBuilds:
+  esbuild: true
+  workerd: true
+  "@biomejs/biome": true
+
+verifyDepsBeforeRun: false

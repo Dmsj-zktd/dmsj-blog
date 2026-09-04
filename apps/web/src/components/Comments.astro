@@ -1,0 +1,54 @@
+---
+import { site } from "@/config/site";
+
+const giscusEnabled =
+  site.giscus.enabled &&
+  Boolean(site.giscus.repo && site.giscus.repoId && site.giscus.categoryId);
+---
+
+{
+  giscusEnabled ? (
+    <section id="comments" class="comments">
+      <h2 id="comment-heading">评论</h2>
+      <div
+        id="giscus"
+        data-repo={site.giscus.repo}
+        data-repo-id={site.giscus.repoId}
+        data-category={site.giscus.category}
+        data-category-id={site.giscus.categoryId}
+        data-mapping={site.giscus.mapping}
+        data-strict={String(site.giscus.strict)}
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="preferred_color_scheme"
+        data-lang={site.giscus.lang}
+        data-loading="lazy"
+      ></div>
+      <script is:inline src="/scripts/giscus.js" defer></script>
+    </section>
+  ) : (
+    <section class="comments comments--empty">
+      <p>评论功能尚未启用：请先在站点配置中填写 Giscus 仓库信息。</p>
+    </section>
+  )
+}
+
+<style is:global>
+  .comments {
+    margin-block-start: 2rem;
+  }
+
+  .comments h2 {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+  }
+
+  .comments--empty {
+    color: var(--fg-faint);
+    font-size: 0.85rem;
+    border: 1px dashed var(--hairline);
+    border-radius: var(--radius);
+    padding: 0.8rem 1rem;
+  }
+</style>

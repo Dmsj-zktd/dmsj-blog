@@ -1,0 +1,37 @@
+{
+  "$schema": "https://biomejs.dev/schemas/latest/schema.json",
+  "files": {
+    "includes": [
+      "AGENTS.md",
+      "apps/web/src/**/*.{ts,astro,css}",
+      "apps/web/functions/**/*.ts",
+      "apps/web/drizzle/**/*.ts",
+      "apps/web/tests/**/*.ts",
+      "apps/admin/src/**/*.{ts,vue,css}",
+      "package.json",
+      "apps/web/package.json",
+      "apps/admin/package.json",
+      "biome.jsonc"
+    ],
+    "ignoreUnknown": true
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
+  }
+}

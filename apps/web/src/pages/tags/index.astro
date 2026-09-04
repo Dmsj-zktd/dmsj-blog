@@ -1,0 +1,39 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { ui } from "@/i18n/zh-CN";
+import { collectTags } from "@/lib/posts";
+
+const tags = await collectTags();
+---
+
+<BaseLayout title={ui.tags.title}>
+  <div class="shell page-wrap">
+    <h1>{ui.tags.title}</h1>
+    {tags.length === 0 ? (
+      <p class="muted">{ui.tags.empty}</p>
+    ) : (
+      <div class="tag-cloud">
+        {tags.map(({ tag, count }) => (
+          <a class="chip" href={`/tags/${encodeURIComponent(tag)}/`}>
+            #{tag}
+            <span class="tag-count">{count}</span>
+          </a>
+        ))}
+      </div>
+    )}
+  </div>
+</BaseLayout>
+
+<style is:global>
+  .tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-block-start: 1.5rem;
+  }
+
+  .tag-count {
+    opacity: 0.75;
+    margin-inline-start: 0.25rem;
+  }
+</style>

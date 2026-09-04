@@ -1,0 +1,60 @@
+---
+import "@/styles/global.css";
+import { site } from "@/config/site";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+
+interface Props {
+  title?: string;
+  description?: string;
+  noindex?: boolean;
+  image?: string;
+  bodyClass?: string;
+}
+
+const {
+  title = site.name,
+  description = site.description,
+  noindex = false,
+  image,
+  bodyClass,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImage = image
+  ? new URL(image, Astro.site).href
+  : undefined;
+---
+
+<!doctype html>
+<html lang={site.locale} data-theme="paper" data-mode="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate" type="application/rss+xml" title={site.name} href="/rss.xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta name="twitter:card" content="summary" />
+    <meta name="color-scheme" content="light dark" />
+    <script is:inline src="/scripts/theme-init.js"></script>
+  </head>
+  <body class={bodyClass}>
+    <a class="skip-link" href="#main">{site.shortName} 跳到正文</a>
+    <Header />
+    <main id="main" data-pagefind-body>
+      <slot />
+    </main>
+    <Footer />
+    <script is:inline src="/scripts/theme.js" defer></script>
+    <script is:inline src="/scripts/analytics.js" defer></script>
+  </body>
+</html>

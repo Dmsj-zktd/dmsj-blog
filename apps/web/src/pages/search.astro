@@ -1,0 +1,91 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { ui } from "@/i18n/zh-CN";
+---
+
+<BaseLayout title={ui.search.title}>
+  <div class="shell page-wrap search-page">
+    <p class="eyebrow">Search</p>
+    <h1>{ui.search.title}</h1>
+    <form id="search-form" role="search">
+      <label class="visually-hidden" for="search-input">{ui.search.placeholder}</label>
+      <input
+        id="search-input"
+        type="search"
+        autocomplete="off"
+        enterkeyhint="search"
+        placeholder={ui.search.placeholder}
+      />
+    </form>
+    <p id="search-status" class="muted" role="status">{ui.search.initial}</p>
+    <ol id="search-results" class="search-results"></ol>
+  </div>
+</BaseLayout>
+
+<script is:inline src="/scripts/search.js" defer></script>
+
+<style is:global>
+  .search-page input {
+    width: 100%;
+    border: 1px solid var(--hairline);
+    background: var(--bg-elev);
+    color: var(--fg);
+    border-radius: var(--radius);
+    padding: 0.7rem 0.95rem;
+    font: inherit;
+    margin-block: 0.8rem;
+  }
+
+  .search-page input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .search-results {
+    display: grid;
+    gap: 0.8rem;
+    margin-block-start: 1rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .search-result {
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    background: var(--bg-elev);
+    padding: 0.9rem 1rem;
+  }
+
+  .search-result a {
+    color: var(--fg);
+    font-family: var(--font-display);
+    font-weight: 680;
+    text-decoration: none;
+  }
+
+  .search-result a:hover {
+    color: var(--accent);
+  }
+
+  .search-result p {
+    margin: 0.3rem 0 0;
+    color: var(--fg-soft);
+    font-size: 0.9rem;
+  }
+
+  .search-marks {
+    background: var(--accent-soft);
+    color: var(--fg);
+    border-radius: 2px;
+    padding: 0 0.1em;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+</style>

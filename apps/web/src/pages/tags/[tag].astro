@@ -1,0 +1,37 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import ArticleCard from "@/components/ArticleCard.astro";
+import { getPublishedPosts } from "@/lib/posts";
+
+export async function getStaticPaths() {
+  const posts = await getPublishedPosts();
+  const tags = new Set(posts.flatMap((p) => p.tags));
+  return [...tags].map((tag) => ({
+    params: { tag },
+    props: { tag },
+  }));
+}
+
+const { tag } = Astro.props;
+const posts = (await getPublishedPosts()).filter((p) => p.tags.includes(tag));
+---
+
+<BaseLayout title={`#${tag}`}>
+  <div class="shell page-wrap">
+    <p class="eyebrow">Tag</p>
+    <h1>#{tag}</h1>
+    <p class="muted">{posts.length} 篇</p>
+    <div class="tag-posts">
+      {posts.map((post) => <ArticleCard post={post} />)}
+    </div>
+  </div>
+</BaseLayout>
+
+<style is:global>
+  .tag-posts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr));
+    gap: 0.9rem;
+    margin-block-start: 1.2rem;
+  }
+</style>
