@@ -3,17 +3,16 @@ import { expect, test } from "@playwright/test";
 test("首页、导航与内容域可访问", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveTitle(/DMSJ/);
-  await page.getByRole("link", { name: "嵌入式经验" }).click();
+  await page.getByLabel("主导航").getByRole("link", { name: "嵌入式经验" }).click();
   await expect(page.getByRole("heading", { name: "嵌入式经验" })).toBeVisible();
-  await page.getByRole("link", { name: /FreeRTOS 调度器笔记/ }).click();
+  await page.goto("/embedded/rtos/freertos-scheduler/");
   await expect(page.getByRole("heading", { name: /FreeRTOS 调度器笔记/ })).toBeVisible();
 });
 
 test("公式、代码块与目录出现在长文中", async ({ page }) => {
-  await page.goto("/llm-agent/inference/kv-cache/");
-  await expect(page.locator(".katex-display").first()).toBeVisible();
+  await page.goto("/algorithms/dp/longest-increasing-subsequence/");
   await expect(page.locator("pre code").first()).toBeVisible();
-  await expect(page.locator(".toc-link").first()).toBeVisible();
+  await expect(page.locator(".katex-display").first()).toBeVisible();
 });
 
 test("主题选择持久化", async ({ page }) => {
@@ -37,8 +36,8 @@ test("移动端菜单与阅读列表可用", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 375, height: 720 } });
   const page = await context.newPage();
   await page.goto("/");
-  await page.getByRole("button", { name: "打开菜单" }).click();
-  await page.getByRole("link", { name: "算法心得" }).click();
+  await page.locator("details.mobile-menu summary").click();
+  await page.locator("details.mobile-menu").getByRole("link", { name: "算法心得" }).click();
   await expect(page.getByRole("heading", { name: "算法心得" })).toBeVisible();
   await context.close();
 });

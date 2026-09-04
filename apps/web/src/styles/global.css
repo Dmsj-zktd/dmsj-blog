@@ -228,6 +228,17 @@ body {
   transition: background-color 120ms ease, color 120ms ease;
 }
 
+.reading-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 0;
+  background: var(--accent);
+  z-index: 90;
+  pointer-events: none;
+}
+
 html[data-theme="paper"] body,
 html[data-theme="gothic"] body {
   font-family: var(--font-display);

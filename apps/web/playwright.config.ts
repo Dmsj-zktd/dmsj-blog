@@ -7,12 +7,12 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["list"]] : "list",
   use: {
-    baseURL: "http://127.0.0.1:4322",
+    baseURL: "http://localhost:4322",
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "pnpm preview -- --host 127.0.0.1 --port 4322",
-    url: "http://127.0.0.1:4322",
+    command: "node scripts/serve-dist.mjs --dir dist --port 4322",
+    url: "http://localhost:4322",
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
     env: {

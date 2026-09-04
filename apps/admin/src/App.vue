@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import { del, type MeResponse, type SessionUser } from "./api";
+import LoginView from "./views/LoginView.vue";
 
 const route = useRoute();
 const router = useRouter();

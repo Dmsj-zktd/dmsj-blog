@@ -27,11 +27,7 @@ const giscusEnabled =
       ></div>
       <script is:inline src="/scripts/giscus.js" defer></script>
     </section>
-  ) : (
-    <section class="comments comments--empty">
-      <p>评论功能尚未启用：请先在站点配置中填写 Giscus 仓库信息。</p>
-    </section>
-  )
+  ) : null
 }
 
 <style is:global>

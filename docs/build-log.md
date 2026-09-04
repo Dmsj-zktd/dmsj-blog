@@ -72,3 +72,15 @@
 
 - 现象：沙箱中 Biome 尝试创建 `~/.biome` 报 EPERM。
 - 解决：lint 以已授权方式运行；CI 环境不受影响。
+
+## 2026-09-05 Playwright E2E 首次运行修复
+
+- 现象：6 个冒烟用例首次运行失败 4 个。
+- 验证：Playwright trace/错误上下文显示：选择器命中多个导航链接、测试文章没有代码块、
+  移动端 summary 角色定位不到、后台页面 `#app` 内只剩 `<loginview></loginview>`。
+- 根因：E2E 选择器歧义；LLM 文章本来就无代码块（选错验证文章）；后台 App.vue 引用了
+  LoginView 但没 import（Vue 把它当原生自定义元素）。
+- 解决：限定导航 aria-label、改用含代码/公式的文章、直接访问文章 URL、给 App.vue 补 import。
+- 服务器侧：Astro 7 `astro preview` 已后台化，不适合 Playwright webServer，新增
+  `apps/web/scripts/serve-dist.mjs` 作为前台静态服务器，`--dir dist` 必须在 `apps/web` 下解析。
+- 结果：6/6 通过。

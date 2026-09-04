@@ -49,6 +49,8 @@ Pages dev 必须传完整 `--d1 DB=<占位 database_id>`，否则会创建未迁
 7. `wrangler.toml` compatibility_date 不能是未来日期；本地联调前先迁移本地 D1。
 8. Admin 是 hash 路由，不要为 `/admin/*` 加 `_redirects` SPA rewrite（本地会判 infinite loop）。
 9. Biome 需要写 `~/.biome`；受限沙箱中运行时需授权，CI 不受影响。
+10. Vue SFC 在模板中使用某个组件时必须在 `<script setup>` import；漏 import 会渲染成裸自定义元素。
+11. E2E 在 `apps/web` 下用 `node scripts/serve-dist.mjs --dir dist` 做前台静态服务器，不要用已后台化的 `astro preview`。
 
 ## 新增内容域
 
