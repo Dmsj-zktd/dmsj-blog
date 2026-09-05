@@ -55,6 +55,8 @@ Pages dev 必须传完整 `--d1 DB=<占位 database_id>`，否则会创建未迁
     CSS keyframes + external JS，不引 GSAP/Framer Motion；粒子 Canvas 遵守 reduced-motion。
 13. Shiki 双主题须给每个 token 的 `.astro-code span` 设 `color:var(--shiki-light/dark)`，
     否则 token 会全部继承外层单色；`data-language` 可在 article.js 渲染为语言徽标。
+14. 需要“每次刷新随机文案”时用 `data-role` + `data-options` JSON + external JS 替换，
+    HTML 中保留一个固定兜底文案，SEO meta 不放随机值。
 
 ## 新增内容域
 

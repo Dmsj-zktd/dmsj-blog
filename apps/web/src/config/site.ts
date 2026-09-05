@@ -1,7 +1,10 @@
 export interface SiteConfig {
   name: string;
   shortName: string;
+  /** 随机金句的兜底展示项（无 JS / SEO 场景） */
   tagline: string;
+  /** 每次刷新随机展示的站点金句 */
+  taglines: string[];
   description: string;
   url: string;
   locale: string;
@@ -49,7 +52,12 @@ export const site: SiteConfig = {
   name: "DMSJ · 工程技术笔记",
   shortName: "DMSJ",
   tagline: "万物皆可 Turing，万物皆可 Hack。",
-  description: "万物皆可 Turing，万物皆可 Hack。",
+  taglines: [
+    "万物皆可 Turing，万物皆可 Hack。",
+    "在边缘与智能的夹缝中，写点耐人寻味的东西。",
+    "Keep hacking, keep turing, keep curious.",
+  ],
+  description: "算法、嵌入式与 LLM/Agent 工程化实践的个人技术博客。",
   url: "https://dmsj-blog.pages.dev",
   locale: "zh-CN",
   author: {

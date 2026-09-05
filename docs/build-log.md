@@ -113,3 +113,11 @@
 - 解决：为 `.astro-code span` 分别设 `color:var(--shiki-light)` 与 dark 对应项；并在
   `article.js` 里依据 `data-language` 在代码块左上角加语言徽标（text/ts/js/c 等）。
 - 结果：`pnpm check` 0 错误；E2E 扩至 9 项全部通过。
+
+## 2026-09-06 随机金句机制
+
+- 需求：站点描述句不希望固定为一句，而是每次刷新从候选句随机展示。
+- 实现：`site.config.ts` 增加 `taglines[]`；首页金句节点带 `data-role="tagline"` 与
+  JSON options，`public/scripts/tagline.js` 每次加载随机替换；无 JS 时显示 `tagline` 兜底。
+- 说明：SEO/HTML meta 仍用固定描述，避免爬虫每次拿到不同标题；视觉金句随机不影响检索。
+- 验证：E2E 10/10 通过。

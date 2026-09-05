@@ -58,6 +58,7 @@ test("页面载入动效与常驻组件存在", async ({ page }) => {
     "slide-left",
     "slide-right",
     "spin-fade",
+    "fade",
   ]).toContain(effect);
   await expect(page.locator("canvas.ambient-canvas")).toBeVisible();
   await expect(page.locator(".cursor-glow")).toBeVisible();
@@ -70,6 +71,23 @@ test("关于页展示 Bio 与个人主页链接", async ({ page }) => {
   await expect(github).toBeVisible();
   const gitee = page.getByLabel("个人主页").getByRole("link", { name: "Gitee" });
   await expect(gitee).toBeVisible();
+});
+
+test("站点金句每次刷新从三句中随机展示", async ({ page }) => {
+  await page.goto("/");
+  const phrases = [
+    "万物皆可 Turing，万物皆可 Hack。",
+    "在边缘与智能的夹缝中，写点耐人寻味的东西。",
+    "Keep hacking, keep turing, keep curious.",
+  ];
+  await page.waitForFunction(
+    (expected) =>
+      expected.includes(
+        document.querySelector('[data-role="tagline"]')?.textContent?.trim() ?? "",
+      ),
+    phrases,
+  );
+  await expect(page.locator('[data-role="tagline"]')).not.toBeEmpty();
 });
 
 test("首页也展示 Bio 与主页链接", async ({ page }) => {

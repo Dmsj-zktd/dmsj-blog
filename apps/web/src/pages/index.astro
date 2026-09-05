@@ -19,7 +19,11 @@ const modulesWithCounts = contentModules
 
 <BaseLayout title={`${site.name}`} description={site.description}>
   <section class="shell hero">
-    <p class="eyebrow">{site.tagline}</p>
+    <p
+      class="eyebrow tagline-reveal"
+      data-role="tagline"
+      data-options={JSON.stringify(site.taglines)}
+    >{site.tagline}</p>
     <h1>
       把<em>踩过的坑</em>写成可复用的知识
     </h1>
