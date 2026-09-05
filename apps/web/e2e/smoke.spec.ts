@@ -12,6 +12,13 @@ test("首页、导航与内容域可访问", async ({ page }) => {
 test("公式、代码块与目录出现在长文中", async ({ page }) => {
   await page.goto("/algorithms/dp/longest-increasing-subsequence/");
   await expect(page.locator("pre code").first()).toBeVisible();
+  await expect(page.locator(".code-lang").first()).toHaveText("TEXT");
+  await expect(
+    page.locator(".code-lang").filter({ hasText: "TS" }).first(),
+  ).toBeVisible();
+  await expect(
+    page.locator('.astro-code span[style*="--shiki-light"]').first(),
+  ).toBeVisible();
   await expect(page.locator(".katex-display").first()).toBeVisible();
 });
 
@@ -63,6 +70,12 @@ test("关于页展示 Bio 与个人主页链接", async ({ page }) => {
   await expect(github).toBeVisible();
   const gitee = page.getByLabel("个人主页").getByRole("link", { name: "Gitee" });
   await expect(gitee).toBeVisible();
+});
+
+test("首页也展示 Bio 与主页链接", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByText(/喜欢千奇百怪/).first()).toBeVisible();
+  await expect(page.getByLabel("个人主页").first()).toBeVisible();
 });
 
 test("后台登录页可打开且未授权不可用接口", async ({ page }) => {

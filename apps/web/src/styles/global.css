@@ -255,16 +255,20 @@ body {
     color-mix(in srgb, var(--accent) 9%, transparent),
     transparent 68%
   );
-  opacity: 0;
+  opacity: 0.35;
+  transform: translate(-50%, -50%);
   will-change: transform;
 }
 
-@media (hover: none), (prefers-reduced-motion: reduce) {
+@media (hover: none) {
   .cursor-glow {
     display: none;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
   .ambient-canvas {
-    display: none;
+    opacity: 0.55;
   }
 }
 
@@ -273,6 +277,20 @@ body > main,
 body > footer {
   position: relative;
   z-index: 1;
+}
+
+@keyframes dmsj-brand-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(29, 78, 216, 0.0); }
+  50% { box-shadow: 0 0 14px 2px color-mix(in srgb, var(--accent) 42%, transparent); }
+}
+
+.brand-mark {
+  animation: dmsj-brand-breathe 7s ease-in-out infinite;
+}
+
+@keyframes dmsj-in-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* ---------- 页面载入动效 ---------- */
@@ -340,12 +358,54 @@ html[data-load-effect="spin-fade"] body > main {
   animation-name: dmsj-in-spin-fade;
 }
 
+html[data-load-effect="fade"] body > main {
+  animation-name: dmsj-in-fade;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  html[data-load-effect] body > main,
+  html[data-load-effect] body > main {
+    animation-name: dmsj-in-fade !important;
+    animation-duration: 600ms !important;
+  }
   html[data-load-effect] body > header,
   html[data-load-effect] body > footer {
+    animation-name: dmsj-in-soft !important;
+  }
+  .brand-mark {
     animation: none;
   }
+}
+
+/* Shiki 双主题：让每个 token 使用自己的 --shiki-* 变量 */
+.article .astro-code span {
+  color: var(--shiki-light);
+}
+
+html[data-mode="dark"] .article .astro-code span {
+  color: var(--shiki-dark);
+}
+
+.article .code-lang,
+.article .copy-button {
+  position: absolute;
+  top: 0.5rem;
+  z-index: 2;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: var(--fg-faint);
+}
+
+.article .code-lang {
+  left: 0.6rem;
+  border: 1px solid var(--hairline);
+  background: var(--bg-elev);
+  border-radius: 3px;
+  padding: 0.08rem 0.42rem;
+}
+
+.article pre {
+  padding-top: 2.45rem;
 }
 
 .reading-progress {

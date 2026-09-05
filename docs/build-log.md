@@ -95,3 +95,21 @@
   Bio 与站点描述替换；`使用指南.md` 已 gitignore。
 - 验证：`pnpm check` 0 错误；E2E 扩至 8 项全部通过（新增载入动效/常驻组件、关于页 Bio 链接）。
 - 待站主：确认站点描述句是否要换用示例二/三；提供 GitHub OAuth 与 Cloudflare 资源后完成上线。
+
+## 2026-09-06 实机验收回归：动效“没生效”与代码“没高亮”
+
+- 现象：用户在真实浏览器里反馈载入动效与鼠标微光“未实现”，且代码块没有语言提示/高亮。
+- 验证：用 Chromium 检查运行态，`data-load-effect` 已随机、`animationName` 正常、canvas 已绘制；
+  结论是用户系统可能开启了“减少动态效果”（Windows 动画关闭时 `prefers-reduced-motion: reduce`），
+  且原实现对 reduce 直接 `display:none`，另外光晕初始 `opacity:0` 未移动鼠标也看不见。
+- 解决：
+  - reduce 时改为“纯透明度渐变 + 低速粒子 + 静态柔光”，不再整体隐藏；
+  - 光晕默认给 `opacity:0.35` 并居中柔光，鼠标移动后增强并跟随；
+  - 粒子透明度/数量略提升，避免太淡不可见；
+  - 品牌字标增加缓慢呼吸光晕，作为常驻动态组件；
+  - 首页 hero 增加 Bio 与个人主页链接。
+- 代码高亮根因：Shiki 双主题只在 token 上写 `--shiki-light/--shiki-dark`，但没给 span 设置
+  `color:var(--shiki-*)`，导致全部继承外层单色。
+- 解决：为 `.astro-code span` 分别设 `color:var(--shiki-light)` 与 dark 对应项；并在
+  `article.js` 里依据 `data-language` 在代码块左上角加语言徽标（text/ts/js/c 等）。
+- 结果：`pnpm check` 0 错误；E2E 扩至 9 项全部通过。

@@ -21,6 +21,13 @@
   // 代码复制
   document.querySelectorAll(".article pre").forEach(function (pre) {
     if (pre.querySelector("button")) return;
+    var lang = pre.getAttribute("data-language");
+    if (lang) {
+      var badge = document.createElement("span");
+      badge.className = "code-lang";
+      badge.textContent = lang.toUpperCase();
+      pre.appendChild(badge);
+    }
     var button = document.createElement("button");
     button.type = "button";
     button.className = "copy-button";

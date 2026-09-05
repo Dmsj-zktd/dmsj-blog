@@ -4,6 +4,7 @@
   var reduced =
     window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var speedFactor = reduced ? 0.12 : 1;
 
   function cssVar(name, fallback) {
     return (
@@ -13,7 +14,7 @@
 
   // —— 常驻环境粒子 ——
   var canvas = document.querySelector(".ambient-canvas");
-  if (canvas && !reduced) {
+  if (canvas) {
     var context = canvas.getContext("2d");
     var particles = [];
     var width = 0;
@@ -33,9 +34,9 @@
           x: Math.random() * width,
           y: Math.random() * height,
           r: 0.7 + Math.random() * 1.6,
-          vx: (Math.random() - 0.5) * 0.18,
-          vy: (Math.random() - 0.5) * 0.16,
-          a: 0.08 + Math.random() * 0.16,
+          vx: (Math.random() - 0.5) * 0.18 * speedFactor,
+          vy: (Math.random() - 0.5) * 0.16 * speedFactor,
+          a: 0.12 + Math.random() * 0.2,
           pulse: Math.random() * Math.PI * 2,
         };
       });
@@ -75,27 +76,40 @@
   // —— 跟随鼠标的微光（仅精确指针 + 非减少动效） ——
   var glow = document.querySelector(".cursor-glow");
   var finePointer = window.matchMedia("(pointer: fine)").matches;
-  if (glow && finePointer && !reduced) {
+  if (glow && finePointer) {
     var raf = null;
     var x = -200;
     var y = -200;
+
+    function position() {
+      glow.style.transform =
+        "translate(" + x + "px, " + y + "px) translate(-50%, -50%)";
+      glow.style.opacity = "0.85";
+    }
 
     function move(event) {
       x = event.clientX;
       y = event.clientY;
       if (!raf) {
         raf = requestAnimationFrame(function () {
-          glow.style.opacity = "1";
-          glow.style.transform =
-            "translate(" + x + "px, " + y + "px) translate(-50%, -50%)";
+          position();
           raf = null;
         });
       }
     }
 
-    document.addEventListener("mousemove", move, { passive: true });
-    document.addEventListener("mouseleave", function () {
-      glow.style.opacity = "0";
-    });
+    if (reduced) {
+      x = window.innerWidth * 0.55;
+      y = window.innerHeight * 0.3;
+      glow.style.opacity = "0.35";
+      glow.style.transform =
+        "translate(" + x + "px, " + y + "px) translate(-50%, -50%)";
+      // 减少动态效果时不跟随鼠标，仅保留一处静态柔光
+    } else {
+      document.addEventListener("mousemove", move, { passive: true });
+      document.addEventListener("mouseleave", function () {
+        glow.style.opacity = "0.35";
+      });
+    }
   }
 })();
