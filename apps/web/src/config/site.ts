@@ -79,7 +79,7 @@ export const site: SiteConfig = {
     ],
   },
   repo: {
-    owner: "your-github-login",
+    owner: "Dmsj-zktd",
     repo: "dmsj-blog",
     branch: "main",
   },
