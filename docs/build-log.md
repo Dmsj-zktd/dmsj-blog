@@ -84,3 +84,14 @@
 - 服务器侧：Astro 7 `astro preview` 已后台化，不适合 Playwright webServer，新增
   `apps/web/scripts/serve-dist.mjs` 作为前台静态服务器，`--dir dist` 必须在 `apps/web` 下解析。
 - 结果：6/6 通过。
+
+## 2026-09-06 动态效果、Bio 与私有使用指南
+
+- 需求：≥3 种随机载入动效、常驻动态组件、轻交互、Bio/描述替换、私密使用指南。
+- 选型：检索到 `simple-icons`（Gitee/GitHub 官方路径）与 CSS View Transitions；静态 MPA
+  采用“CSS keyframes + 外部 JS 随机 + 自绘 Canvas”，避免引入动画框架运行时。
+- 实现：`effect-init.js` 随机选 5 种载入效果；`effects.js` 提供 20 个低透明度环境粒子与
+  桌面端鼠标微光；`SocialLinks.astro` 用 simple-icons 渲染 Gitee/GitHub 链接；
+  Bio 与站点描述替换；`使用指南.md` 已 gitignore。
+- 验证：`pnpm check` 0 错误；E2E 扩至 8 项全部通过（新增载入动效/常驻组件、关于页 Bio 链接）。
+- 待站主：确认站点描述句是否要换用示例二/三；提供 GitHub OAuth 与 Cloudflare 资源后完成上线。

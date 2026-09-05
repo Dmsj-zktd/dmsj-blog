@@ -10,6 +10,7 @@ export interface SiteConfig {
     login: string;
     email: string;
     bio: string;
+    social: Array<{ id: "github" | "gitee"; label: string; url: string }>;
   };
   repo: {
     owner: string;
@@ -47,16 +48,27 @@ export interface SiteConfig {
 export const site: SiteConfig = {
   name: "DMSJ · 工程技术笔记",
   shortName: "DMSJ",
-  tagline: "算法 · 嵌入式 · LLM/Agent 的工程化记录",
-  description:
-    "面向面试与技术展示的个人技术博客：沉淀算法心得、嵌入式底层经验、LLM/Agent 工程实践，追求可复现、可检索、可长期维护。",
+  tagline: "万物皆可 Turing，万物皆可 Hack。",
+  description: "万物皆可 Turing，万物皆可 Hack。",
   url: "https://dmsj-blog.pages.dev",
   locale: "zh-CN",
   author: {
     name: "DMSJ",
-    login: "your-github-login",
+    login: "Dmsj-zktd",
     email: "you@example.com",
-    bio: "关注嵌入式系统、边缘 NPU 与 LLM/Agent 工程化的开发者。",
+    bio: "喜欢千奇百怪 – 总是啥都关注的 边缘开发者  ^~^",
+    social: [
+      {
+        id: "github",
+        label: "GitHub",
+        url: "https://github.com/Dmsj-zktd",
+      },
+      {
+        id: "gitee",
+        label: "Gitee",
+        url: "https://gitee.com/zky_dmsj",
+      },
+    ],
   },
   repo: {
     owner: "your-github-login",

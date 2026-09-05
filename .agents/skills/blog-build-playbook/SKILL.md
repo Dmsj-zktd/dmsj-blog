@@ -51,6 +51,8 @@ Pages dev 必须传完整 `--d1 DB=<占位 database_id>`，否则会创建未迁
 9. Biome 需要写 `~/.biome`；受限沙箱中运行时需授权，CI 不受影响。
 10. Vue SFC 在模板中使用某个组件时必须在 `<script setup>` import；漏 import 会渲染成裸自定义元素。
 11. E2E 在 `apps/web` 下用 `node scripts/serve-dist.mjs --dir dist` 做前台静态服务器，不要用已后台化的 `astro preview`。
+12. 动效/图标优先复用：社交图标用 `simple-icons`（`siGithub`/`siGitee`），静态页动效用
+    CSS keyframes + external JS，不引 GSAP/Framer Motion；粒子 Canvas 遵守 reduced-motion。
 
 ## 新增内容域
 

@@ -9,6 +9,7 @@ dist/
 *.local
 *.log
 .DS_Store
+使用指南.md
 .vite/
 coverage/
 playwright-report/

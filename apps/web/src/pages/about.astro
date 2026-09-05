@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import SocialLinks from "@/components/SocialLinks.astro";
 import { site } from "@/config/site";
 import { ui } from "@/i18n/zh-CN";
 ---
@@ -9,10 +10,10 @@ import { ui } from "@/i18n/zh-CN";
     <p class="eyebrow">About</p>
     <h1>{ui.about.title}</h1>
     <p>
-      你好，我是 <strong>{site.author.name}</strong>。这里记录我在
-      算法、嵌入式系统与 LLM/Agent 工程实践中的经验、踩坑与思考。
+      你好，我是 <strong>{site.author.name}</strong>。
     </p>
     <p>{site.author.bio}</p>
+    <SocialLinks />
     <h2>这个站怎么用</h2>
     <ul>
       <li>文章按内容域组织，可用标签与站内搜索快速定位；</li>

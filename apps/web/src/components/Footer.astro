@@ -8,8 +8,13 @@ import { site } from "@/config/site";
       © {new Date().getFullYear()} {site.author.name} · {site.license.content} · 代码 {site.license.code}
     </p>
     <p class="footer-meta">
+      {site.author.social.map((item) => (
+        <>
+          <a href={item.url} target="_blank" rel="noopener noreferrer">{item.label}</a>
+          <span aria-hidden="true">·</span>
+        </>
+      ))}
       <a href="/rss.xml">RSS</a>
-      <span aria-hidden="true">·</span>
       <span>Astro + Cloudflare</span>
     </p>
   </div>

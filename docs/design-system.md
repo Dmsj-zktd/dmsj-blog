@@ -32,6 +32,18 @@
 - 主题：访客自选持久化到 localStorage；未配置时每次访问随机；`?theme=` 可预览。
 - 代码块：复制按钮仅在 hover/focus 显示；语法高亮由 Shiki 在构建期生成。
 - 搜索：Pagefind 构建期中文索引，前端无搜索服务器依赖。
+- 页面载入：5 种动效（淡入上滑/缩放去模糊/左右滑入/旋转渐显）由 `effect-init.js` 随机选一；
+  遵守 `prefers-reduced-motion`，无 JS 时页面正常显示。
+- 常驻动态：极低透明度环境粒子 canvas + 桌面端鼠标微光；内容层 `z-index:1` 保证不遮可读性；
+  触屏与减少动效时自动关闭。
+- 交互反馈：按钮/卡片按压下沉、悬停抬升、focus-visible 描边，全部 CSS 实现。
+
+## 选型结论（先复用后自研）
+
+- 图标：`simple-icons`（官方品牌路径，GitHub/Gitee）编译期取路径，不发外部请求；
+- 动效：静态多页站点用“CSS 动画 + 原生 external JS”，不引入 Framer Motion/GSAP 运行时，
+  避免为每次全页加载付框架成本；现代浏览器可另用 CSS View Transitions 增强；
+- 粒子/光晕：纯 Canvas 自绘约 2KB，无第三方依赖。
 
 ## 素材来源结论
 

@@ -228,6 +228,126 @@ body {
   transition: background-color 120ms ease, color 120ms ease;
 }
 
+/* ---------- 常驻环境层 ---------- */
+.ambient-canvas,
+.cursor-glow {
+  position: fixed;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.ambient-canvas {
+  inset: 0;
+  opacity: 0.9;
+}
+
+.cursor-glow {
+  top: 0;
+  left: 0;
+  right: auto;
+  bottom: auto;
+  width: min(38vw, 26rem);
+  height: min(38vw, 26rem);
+  margin: 0;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--accent) 9%, transparent),
+    transparent 68%
+  );
+  opacity: 0;
+  will-change: transform;
+}
+
+@media (hover: none), (prefers-reduced-motion: reduce) {
+  .cursor-glow {
+    display: none;
+  }
+  .ambient-canvas {
+    display: none;
+  }
+}
+
+body > header,
+body > main,
+body > footer {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- 页面载入动效 ---------- */
+@keyframes dmsj-in-fade-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dmsj-in-zoom-blur {
+  from { opacity: 0.35; transform: scale(0.985); filter: blur(6px); }
+  to { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+
+@keyframes dmsj-in-slide-left {
+  from { opacity: 0; transform: translateX(26px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes dmsj-in-slide-right {
+  from { opacity: 0; transform: translateX(-26px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes dmsj-in-spin-fade {
+  from { opacity: 0; transform: rotate(0.8deg) scale(1.02); }
+  to { opacity: 1; transform: rotate(0) scale(1); }
+}
+
+@keyframes dmsj-in-soft {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+html[data-load-effect] body > main,
+html[data-load-effect] body > header,
+html[data-load-effect] body > footer {
+  animation-duration: 560ms;
+  animation-timing-function: cubic-bezier(0.22, 0.75, 0.28, 1);
+  animation-fill-mode: both;
+}
+
+html[data-load-effect] body > header,
+html[data-load-effect] body > footer {
+  animation-name: dmsj-in-soft;
+  animation-duration: 360ms;
+}
+
+html[data-load-effect="fade-up"] body > main {
+  animation-name: dmsj-in-fade-up;
+}
+
+html[data-load-effect="zoom-blur"] body > main {
+  animation-name: dmsj-in-zoom-blur;
+}
+
+html[data-load-effect="slide-left"] body > main {
+  animation-name: dmsj-in-slide-left;
+}
+
+html[data-load-effect="slide-right"] body > main {
+  animation-name: dmsj-in-slide-right;
+}
+
+html[data-load-effect="spin-fade"] body > main {
+  animation-name: dmsj-in-spin-fade;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-load-effect] body > main,
+  html[data-load-effect] body > header,
+  html[data-load-effect] body > footer {
+    animation: none;
+  }
+}
+
 .reading-progress {
   position: fixed;
   top: 0;
@@ -327,6 +447,26 @@ button,
 .btn:hover {
   border-color: var(--accent);
   text-decoration: none;
+}
+
+.btn:active,
+.chip:active,
+.nav-link:active,
+.card:active {
+  transform: translateY(1px) scale(0.998);
+}
+
+.btn,
+.chip,
+.nav-link,
+a,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:is(.btn, .chip, .nav-link, a, summary, input, textarea, button):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .btn--accent {

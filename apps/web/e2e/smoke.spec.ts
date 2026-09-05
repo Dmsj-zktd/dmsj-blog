@@ -42,6 +42,29 @@ test("移动端菜单与阅读列表可用", async ({ browser }) => {
   await context.close();
 });
 
+test("页面载入动效与常驻组件存在", async ({ page }) => {
+  await page.goto("/");
+  const effect = await page.locator("html").getAttribute("data-load-effect");
+  expect([
+    "fade-up",
+    "zoom-blur",
+    "slide-left",
+    "slide-right",
+    "spin-fade",
+  ]).toContain(effect);
+  await expect(page.locator("canvas.ambient-canvas")).toBeVisible();
+  await expect(page.locator(".cursor-glow")).toBeVisible();
+});
+
+test("关于页展示 Bio 与个人主页链接", async ({ page }) => {
+  await page.goto("/about/");
+  await expect(page.getByText(/喜欢千奇百怪/)).toBeVisible();
+  const github = page.getByLabel("个人主页").getByRole("link", { name: "GitHub" });
+  await expect(github).toBeVisible();
+  const gitee = page.getByLabel("个人主页").getByRole("link", { name: "Gitee" });
+  await expect(gitee).toBeVisible();
+});
+
 test("后台登录页可打开且未授权不可用接口", async ({ page }) => {
   await page.goto("/admin/");
   await expect(page.getByRole("heading", { name: /管理后台/ })).toBeVisible();

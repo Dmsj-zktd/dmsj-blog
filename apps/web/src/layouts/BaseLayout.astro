@@ -46,9 +46,12 @@ const ogImage = image
     <meta name="twitter:card" content="summary" />
     <meta name="color-scheme" content="light dark" />
     <script is:inline src="/scripts/theme-init.js"></script>
+    <script is:inline src="/scripts/effect-init.js"></script>
   </head>
   <body class={bodyClass}>
     <a class="skip-link" href="#main">{site.shortName} 跳到正文</a>
+    <canvas class="ambient-canvas" aria-hidden="true"></canvas>
+    <div class="cursor-glow" aria-hidden="true"></div>
     <Header />
     <main id="main" data-pagefind-body>
       <slot />
@@ -56,5 +59,6 @@ const ogImage = image
     <Footer />
     <script is:inline src="/scripts/theme.js" defer></script>
     <script is:inline src="/scripts/analytics.js" defer></script>
+    <script is:inline src="/scripts/effects.js" defer></script>
   </body>
 </html>
