@@ -130,3 +130,17 @@
   并新增 E2E 断言：徽标底部 <= 代码首行顶部。
 - OAuth：站主提供 Client ID/Secret，写入 gitignore 的 `.dev.vars`；
   `SITE_URL=http://localhost:8788`、`ALLOWED_GITHUB_LOGIN=Dmsj-zktd`；本地登录入口已返回 200。
+
+## 2026-09-06 GitHub 安全加固与 Cloudflare 上线
+
+- GitHub：创建公开仓库 Dmsj-zktd/dmsj-blog，启用 Dependabot alerts、secret scanning 与
+  push protection，main 禁止 force push/delete；本地敏感文件扫描通过。
+- 依赖：发现此前误装废弃 npm 包 `biome@0.3.3`（携带 request/lodash/ini 旧链），替换为官方
+  `@biomejs/biome` 并移除 admin 未用测试依赖；Dependabot 11 条告警全部转为 fixed。
+- Cloudflare：完成 OAuth 登录，创建 D1 `dmsj-blog-db` 与 KV `SESSION`，Pages 项目
+  `dmsj-blog`，批量写入 10 个生产 Secrets，远端迁移成功，部署至
+  https://dmsj-blog.pages.dev。
+- 坑：Pages 平台保留 `ENVIRONMENT` 绑定名，不能把该名字配成 Secret/var；
+  线上验证 `/api/auth/me`、`/api/track`、`login-start` 均 200/204。
+- 待开启：仓库变量 `ENABLE_CF_DEPLOY=true` + Cloudflare API Token 后，
+  后台发文提交 main 即可触发 CI 自动部署。

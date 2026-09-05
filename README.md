@@ -51,7 +51,8 @@ pnpm dlx wrangler pages dev dist --d1 DB --kv SESSION --port 8788
 3. 创建 GitHub OAuth App（Callback 填 `https://<project>.pages.dev/api/auth/callback`，scope：`read:user public_repo`）；
 4. 在 Cloudflare 创建 Pages 项目、D1 与 KV，把 ID 写入 `apps/web/wrangler.toml`；
 5. 配置 Cloudflare Secrets/Variables（见 `.dev.vars.example`）；
-6. 在 GitHub Actions Secrets 配 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`；
+6. 在 GitHub Actions Secrets 配 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`，
+   并在 Repository variables 设 `ENABLE_CF_DEPLOY=true` 后推送才自动部署；
 7. push main，先跑远端迁移后部署；随后执行 `docs/runbook.md` 的验收清单。
 
 ## 许可

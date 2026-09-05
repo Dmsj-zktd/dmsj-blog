@@ -42,6 +42,7 @@ Variable（可选）：`TURNSTILE_SECRET_KEY`
 ## 5. GitHub Actions Secrets
 
 `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`。
+并在仓库 Variables 设置 `ENABLE_CF_DEPLOY=true`，之后每次 main push 都会自动部署。
 
 ## 6. 首次远端迁移 + 部署
 
