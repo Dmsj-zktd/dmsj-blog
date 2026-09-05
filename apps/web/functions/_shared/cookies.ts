@@ -1,5 +1,5 @@
-import { isProd } from "./env";
 import type { Env } from "./env";
+import { isProd } from "./env";
 
 export const SESSION_COOKIE = "dmsj_sid";
 
@@ -15,11 +15,7 @@ export function parseCookies(request: Request): Record<string, string> {
   return result;
 }
 
-export function cookieHeader(
-  env: Env,
-  value: string,
-  maxAgeSeconds: number,
-): string {
+export function cookieHeader(env: Env, value: string, maxAgeSeconds: number): string {
   const secure = isProd(env) ? "; Secure" : "";
   return `${SESSION_COOKIE}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAgeSeconds}${secure}`;
 }

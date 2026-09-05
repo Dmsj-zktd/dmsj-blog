@@ -1,5 +1,5 @@
-import type { Env } from "./env";
 import type { SessionUser } from "./auth";
+import type { Env } from "./env";
 
 export interface RepoFile {
   path: string;
@@ -20,9 +20,7 @@ function base64EncodeUtf8(value: string): string {
   const bytes = new TextEncoder().encode(value);
   const chunks: string[] = [];
   for (let i = 0; i < bytes.length; i += 0x8000) {
-    chunks.push(
-      String.fromCharCode(...bytes.subarray(i, i + 0x8000)),
-    );
+    chunks.push(String.fromCharCode(...bytes.subarray(i, i + 0x8000)));
   }
   return btoa(chunks.join(""));
 }
@@ -46,10 +44,7 @@ export class GitHubClient {
     return this.env.REPO_BRANCH ?? "main";
   }
 
-  private async request(
-    url: string,
-    init: RequestInit = {},
-  ): Promise<Response> {
+  private async request(url: string, init: RequestInit = {}): Promise<Response> {
     const response = await fetch(url, {
       ...init,
       headers: {
@@ -103,12 +98,7 @@ export class GitHubClient {
     return response.text();
   }
 
-  async putFile(
-    path: string,
-    content: string,
-    message: string,
-    sha?: string,
-  ): Promise<void> {
+  async putFile(path: string, content: string, message: string, sha?: string): Promise<void> {
     await this.request(
       `https://api.github.com/repos/${this.owner()}/${this.repo()}/contents/${path}`,
       {

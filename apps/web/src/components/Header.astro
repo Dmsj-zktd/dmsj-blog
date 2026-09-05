@@ -3,9 +3,7 @@ import { site } from "@/config/site";
 import { contentModules } from "@/site/content-registry";
 import { themes } from "@/site/themes";
 
-const domainNav = contentModules
-  .filter((m) => m.inNav)
-  .sort((a, b) => a.order - b.order);
+const domainNav = contentModules.filter((m) => m.inNav).sort((a, b) => a.order - b.order);
 ---
 
 <header class="site-header no-print">

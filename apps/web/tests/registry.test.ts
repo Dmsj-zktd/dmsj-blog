@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
 
 import { contentModules } from "../src/site/content-registry";
 import { themes } from "../src/site/themes";

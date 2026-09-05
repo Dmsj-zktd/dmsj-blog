@@ -18,12 +18,12 @@
   --code-fg: #3d352c;
   --kbd-bg: #f0ebe1;
   --shadow: 0 1px 2px rgba(38, 34, 28, 0.05), 0 8px 24px rgba(38, 34, 28, 0.06);
-  --font-body: "Inter Variable", "PingFang SC", "Hiragino Sans GB",
-    "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
-  --font-display: "Iowan Old Style", "Source Han Serif SC", "Noto Serif CJK SC",
-    "Songti SC", "SimSun", serif;
-  --font-mono: "SFMono-Regular", "Cascadia Code", Consolas, "Liberation Mono",
-    Menlo, monospace;
+  --font-body:
+    "Inter Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei",
+    system-ui, sans-serif;
+  --font-display:
+    "Iowan Old Style", "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "SimSun", serif;
+  --font-mono: "SFMono-Regular", "Cascadia Code", Consolas, "Liberation Mono", Menlo, monospace;
   --measure: 46rem;
   --measure-wide: 64rem;
   --page-pad: 1.25rem;
@@ -96,8 +96,7 @@ html[data-theme="blueprint"][data-mode="light"] {
   --code-fg: #1b2735;
   --kbd-bg: #e3e9f0;
   --shadow: 0 0 0 1px rgba(20, 32, 46, 0.05), 0 6px 18px rgba(20, 32, 46, 0.08);
-  --font-display: "Inter Variable", "PingFang SC", "Microsoft YaHei UI",
-    system-ui, sans-serif;
+  --font-display: "Inter Variable", "PingFang SC", "Microsoft YaHei UI", system-ui, sans-serif;
 }
 
 html[data-theme="blueprint"][data-mode="dark"] {
@@ -114,8 +113,7 @@ html[data-theme="blueprint"][data-mode="dark"] {
   --code-bg: #101a2c;
   --code-fg: #d0dcea;
   --kbd-bg: #172338;
-  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.03),
-    0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.03), 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 html[data-theme="telegraph"][data-mode="light"] {
@@ -132,8 +130,7 @@ html[data-theme="telegraph"][data-mode="light"] {
   --code-bg: #e5dcc5;
   --code-fg: #2c2619;
   --kbd-bg: #e6ddc8;
-  --shadow: 0 0 0 1px rgba(42, 37, 27, 0.04),
-    0 8px 24px rgba(42, 37, 27, 0.08);
+  --shadow: 0 0 0 1px rgba(42, 37, 27, 0.04), 0 8px 24px rgba(42, 37, 27, 0.08);
   --font-mono: "SFMono-Regular", "Cascadia Code", Consolas, monospace;
 }
 
@@ -151,8 +148,7 @@ html[data-theme="telegraph"][data-mode="dark"] {
   --code-bg: #1e1a13;
   --code-fg: #d9d0bc;
   --kbd-bg: #282217;
-  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.02),
-    0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.02), 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 html[data-theme="terminal"][data-mode="dark"] {
@@ -169,12 +165,9 @@ html[data-theme="terminal"][data-mode="dark"] {
   --code-bg: #0d100e;
   --code-fg: #c6d2c6;
   --kbd-bg: #1a1f1c;
-  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.02),
-    0 10px 30px rgba(0, 0, 0, 0.5);
-  --font-body: "Inter Variable", "PingFang SC", "Microsoft YaHei UI",
-    system-ui, sans-serif;
-  --font-display: "Inter Variable", "PingFang SC", "Microsoft YaHei UI",
-    system-ui, sans-serif;
+  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.02), 0 10px 30px rgba(0, 0, 0, 0.5);
+  --font-body: "Inter Variable", "PingFang SC", "Microsoft YaHei UI", system-ui, sans-serif;
+  --font-display: "Inter Variable", "PingFang SC", "Microsoft YaHei UI", system-ui, sans-serif;
   --font-mono: "SFMono-Regular", "Cascadia Code", Consolas, monospace;
 }
 
@@ -225,7 +218,9 @@ body {
   line-height: 1.75;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
 }
 
 /* ---------- 常驻环境层 ---------- */
@@ -280,8 +275,13 @@ body > footer {
 }
 
 @keyframes dmsj-brand-breathe {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(29, 78, 216, 0.0); }
-  50% { box-shadow: 0 0 14px 2px color-mix(in srgb, var(--accent) 42%, transparent); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(29, 78, 216, 0);
+  }
+  50% {
+    box-shadow: 0 0 14px 2px color-mix(in srgb, var(--accent) 42%, transparent);
+  }
 }
 
 .brand-mark {
@@ -289,39 +289,79 @@ body > footer {
 }
 
 @keyframes dmsj-in-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ---------- 页面载入动效 ---------- */
 @keyframes dmsj-in-fade-up {
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes dmsj-in-zoom-blur {
-  from { opacity: 0.35; transform: scale(0.985); filter: blur(6px); }
-  to { opacity: 1; transform: scale(1); filter: blur(0); }
+  from {
+    opacity: 0.35;
+    transform: scale(0.985);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
 }
 
 @keyframes dmsj-in-slide-left {
-  from { opacity: 0; transform: translateX(26px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(26px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes dmsj-in-slide-right {
-  from { opacity: 0; transform: translateX(-26px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-26px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes dmsj-in-spin-fade {
-  from { opacity: 0; transform: rotate(0.8deg) scale(1.02); }
-  to { opacity: 1; transform: rotate(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: rotate(0.8deg) scale(1.02);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
 }
 
 @keyframes dmsj-in-soft {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 html[data-load-effect] body > main,
@@ -497,7 +537,9 @@ button,
   line-height: 1.4;
   cursor: pointer;
   text-decoration: none;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
 }
 
 .btn:hover {
@@ -545,7 +587,9 @@ summary {
   font-size: 0.78rem;
   color: var(--fg-soft);
   text-decoration: none;
-  transition: color 120ms ease, border-color 120ms ease;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
 }
 
 a.chip:hover {

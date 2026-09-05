@@ -1,5 +1,5 @@
-import type { Env } from "./env";
 import type { SessionUser } from "./auth";
+import type { Env } from "./env";
 
 export async function writeAudit(
   env: Env,

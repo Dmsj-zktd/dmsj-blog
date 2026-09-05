@@ -3,11 +3,11 @@
   "files": {
     "includes": [
       "AGENTS.md",
-      "apps/web/src/**/*.{ts,astro,css}",
+      "apps/web/src/**/*.{ts,css}",
       "apps/web/functions/**/*.ts",
       "apps/web/drizzle/**/*.ts",
       "apps/web/tests/**/*.ts",
-      "apps/admin/src/**/*.{ts,vue,css}",
+      "apps/admin/src/**/*.{ts,css}",
       "package.json",
       "apps/web/package.json",
       "apps/admin/package.json",
@@ -24,7 +24,13 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "preset": "recommended",
+      "complexity": {
+        "noImportantStyles": "off"
+      },
+      "style": {
+        "noDescendingSpecificity": "off"
+      }
     }
   },
   "javascript": {

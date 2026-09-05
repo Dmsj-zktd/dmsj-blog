@@ -14,7 +14,8 @@ function escapeXml(value: string): string {
 
 export async function GET() {
   const posts = await getPublishedPosts();
-  const items = posts.slice(0, 30)
+  const items = posts
+    .slice(0, 30)
     .map(
       (post) => `    <item>
       <title>${escapeXml(post.title)}</title>

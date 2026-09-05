@@ -1,5 +1,5 @@
-import type { Env } from "./env";
 import { hashValue, isoDayFromTs } from "./crypto";
+import type { Env } from "./env";
 
 const BOT_RE =
   /bot|crawler|spider|slurp|headless|curl|wget|python-requests|go-http-client|facebookexternalhit|telegrambot/i;
@@ -36,11 +36,15 @@ export function parseClient(ua: string) {
 }
 
 function safePath(value: string): string {
-  return value.slice(0, 600).replace(/[\u0000-\u001f]/g, "");
+  let clean = "";
+  for (const char of value.slice(0, 600)) {
+    if ((char.codePointAt(0) ?? 0) >= 32) clean += char;
+  }
+  return clean;
 }
 
 function referrerHost(value: string): string | null {
-  if (!value || !value.startsWith("http")) return null;
+  if (!value?.startsWith("http")) return null;
   try {
     return new URL(value).hostname.slice(0, 200);
   } catch {
@@ -68,17 +72,7 @@ export async function recordPageView(
       (ts, day, path, country, referrer_host, browser, os, device, ip_hash, bot)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
   )
-    .bind(
-      now,
-      day,
-      safePath(input.path),
-      input.country,
-      referrer,
-      browser,
-      os,
-      device,
-      ipHash,
-    )
+    .bind(now, day, safePath(input.path), input.country, referrer, browser, os, device, ipHash)
     .run();
 
   await env.DB.prepare(

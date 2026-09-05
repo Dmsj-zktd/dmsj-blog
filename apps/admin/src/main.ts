@@ -2,10 +2,10 @@ import { createApp } from "vue";
 import { createRouter, createWebHashHistory } from "vue-router";
 
 import App from "./App.vue";
-import LoginView from "./views/LoginView.vue";
-import DashboardView from "./views/DashboardView.vue";
 import ArticlesView from "./views/ArticlesView.vue";
 import AuditView from "./views/AuditView.vue";
+import DashboardView from "./views/DashboardView.vue";
+import LoginView from "./views/LoginView.vue";
 import "./styles.css";
 
 const router = createRouter({

@@ -1,6 +1,6 @@
-import { SESSION_COOKIE, parseCookies } from "./cookies";
-import type { Env } from "./env";
+import { parseCookies, SESSION_COOKIE } from "./cookies";
 import { randomToken } from "./crypto";
+import type { Env } from "./env";
 
 export interface SessionUser {
   id: number;
@@ -35,10 +35,7 @@ export async function createSession(
   return session;
 }
 
-export async function getSession(
-  env: Env,
-  request: Request,
-): Promise<Session | null> {
+export async function getSession(env: Env, request: Request): Promise<Session | null> {
   const cookies = parseCookies(request);
   const sid = cookies[SESSION_COOKIE];
   if (!sid) return null;

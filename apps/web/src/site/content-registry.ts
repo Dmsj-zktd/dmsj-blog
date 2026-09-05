@@ -6,12 +6,7 @@
  * 2. 在本文件追加一条 `ContentModule`；
  * 3. 首页导航、域列表、目录/标签聚合、sitemap、RSS、搜索自动派生。
  */
-export type DomainKey =
-  | "algorithms"
-  | "embedded"
-  | "llm-agent"
-  | "projects"
-  | "thoughts";
+export type DomainKey = "algorithms" | "embedded" | "llm-agent" | "projects" | "thoughts";
 
 export interface ContentModule {
   /** 目录名，必须与 content/<key> 一致 */

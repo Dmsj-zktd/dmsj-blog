@@ -1,7 +1,7 @@
 import type { CollectionEntry } from "astro:content";
 import { getCollection } from "astro:content";
 
-import { getModule, type ContentModule } from "@/site/content-registry";
+import { type ContentModule, getModule } from "@/site/content-registry";
 
 export interface PostSummary {
   id: string;
@@ -51,9 +51,7 @@ function toPost(entry: BlogEntry): PostSummary | undefined {
 
 export async function getAllPosts(): Promise<PostSummary[]> {
   const entries = await getCollection("blog");
-  const posts = entries
-    .map(toPost)
-    .filter((p): p is PostSummary => Boolean(p));
+  const posts = entries.map(toPost).filter((p): p is PostSummary => Boolean(p));
   return posts.sort((a, b) => b.date.getTime() - a.date.getTime());
 }
 

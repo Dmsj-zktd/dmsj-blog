@@ -5,17 +5,8 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 import ArticleCard from "@/components/ArticleCard.astro";
 import Comments from "@/components/Comments.astro";
 import { site } from "@/config/site";
-import {
-  contentModules,
-  getModule,
-  humanizeCategorySegment,
-} from "@/site/content-registry";
-import {
-  getAllPosts,
-  formatDate,
-  getReadingMinutes,
-  type PostSummary,
-} from "@/lib/posts";
+import { contentModules, getModule, humanizeCategorySegment } from "@/site/content-registry";
+import { getAllPosts, formatDate, getReadingMinutes, type PostSummary } from "@/lib/posts";
 
 type Props =
   | {
@@ -78,9 +69,7 @@ if (props.kind === "module" || props.kind === "dir") {
   const module = getModule(props.moduleKey);
   if (module) {
     moduleTitle = module.label;
-    modulePosts = allPosts.filter(
-      (p) => p.domain === module.key && !p.draft,
-    );
+    modulePosts = allPosts.filter((p) => p.domain === module.key && !p.draft);
     if (props.kind === "dir") {
       const dirs = props.dirPath.split("/");
       const prefix = `${module.key}/${props.dirPath}/`;
@@ -106,14 +95,12 @@ const pageTitle = post
     ? `${categoryTitle} · ${moduleTitle}`
     : moduleTitle;
 
-const tocItems = renderedContent?.headings
-  .filter((heading) => heading.depth >= 2 && heading.depth <= 3)
-  ?? [];
+const tocItems =
+  renderedContent?.headings.filter((heading) => heading.depth >= 2 && heading.depth <= 3) ?? [];
 
 const listingModuleKey =
   props.kind === "module" || props.kind === "dir" ? props.moduleKey : undefined;
-const listingDirs =
-  props.kind === "dir" ? props.dirPath.split("/") : [];
+const listingDirs = props.kind === "dir" ? props.dirPath.split("/") : [];
 ---
 
 <BaseLayout

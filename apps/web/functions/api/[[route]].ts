@@ -1,13 +1,7 @@
-import { Context, Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { z } from "zod";
-
-import type { Env } from "../_shared/env";
-import {
-  clearCookieHeader,
-  cookieHeader,
-} from "../_shared/cookies";
-import { randomToken, hashValue, isValidDay, dayRangeEpochMs } from "../_shared/crypto";
-import { rateLimit } from "../_shared/rate";
+import { recordPageView } from "../_shared/analytics";
+import { writeAudit } from "../_shared/audit";
 import {
   checkCsrf,
   createSession,
@@ -15,10 +9,12 @@ import {
   getSession,
   type Session,
 } from "../_shared/auth";
-import { writeAudit } from "../_shared/audit";
-import { buildGitHubClient } from "../_shared/github";
-import { recordPageView } from "../_shared/analytics";
+import { clearCookieHeader, cookieHeader } from "../_shared/cookies";
+import { dayRangeEpochMs, hashValue, isValidDay, randomToken } from "../_shared/crypto";
 import { toCsv } from "../_shared/csv";
+import type { Env } from "../_shared/env";
+import { buildGitHubClient, type GitHubClient } from "../_shared/github";
+import { rateLimit } from "../_shared/rate";
 
 type AppEnv = {
   Bindings: Env;
@@ -42,10 +38,7 @@ app.use("*", async (c, next) => {
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("X-Frame-Options", "DENY");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  headers.set(
-    "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), payment=()",
-  );
+  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
   headers.set("Cross-Origin-Opener-Policy", "same-origin");
   headers.set("Cross-Origin-Resource-Policy", "same-origin");
   headers.set(
@@ -113,18 +106,15 @@ app.post("/api/auth/login-start", async (c) => {
   if (c.env.TURNSTILE_SECRET_KEY) {
     const token = parsed.data.turnstileToken;
     if (!token) return json({ error: "turnstile_required" }, 400);
-    const verify = await fetch(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          secret: c.env.TURNSTILE_SECRET_KEY,
-          response: token,
-          remoteip: clientIp(c),
-        }),
-      },
-    );
+    const verify = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        secret: c.env.TURNSTILE_SECRET_KEY,
+        response: token,
+        remoteip: clientIp(c),
+      }),
+    });
     const check = (await verify.json()) as { success?: boolean };
     if (!check.success) return json({ error: "turnstile_failed" }, 403);
   }
@@ -152,22 +142,19 @@ app.get("/api/auth/callback", async (c) => {
   }
   await c.env.SESSION.delete(`oauth:state:${state}`);
 
-  const tokenResponse = await fetch(
-    "https://github.com/login/oauth/access_token",
-    {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        client_id: c.env.GITHUB_CLIENT_ID,
-        client_secret: c.env.GITHUB_CLIENT_SECRET,
-        code,
-        redirect_uri: `${originOf(c)}/api/auth/callback`,
-      }),
+  const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({
+      client_id: c.env.GITHUB_CLIENT_ID,
+      client_secret: c.env.GITHUB_CLIENT_SECRET,
+      code,
+      redirect_uri: `${originOf(c)}/api/auth/callback`,
+    }),
+  });
   const tokenBody = (await tokenResponse.json()) as {
     access_token?: string;
     error?: string;
@@ -180,7 +167,7 @@ app.get("/api/auth/callback", async (c) => {
   }
 
   const gh = buildGitHubClient(c.env, tokenBody.access_token, "oauth-user");
-  let user;
+  let user: Awaited<ReturnType<GitHubClient["getAuthenticatedUser"]>>;
   try {
     user = await gh.getAuthenticatedUser();
   } catch {
@@ -318,10 +305,12 @@ app.get("/api/admin/analytics/breakdown", async (c) => {
   const binds: Array<string | number> = [range.from, range.to];
   if (q) binds.push(`%${escapeLike(q)}%`);
   binds.push(pageSize, offset);
-  const rows = await c.env.DB.prepare(sql).bind(...binds).all<{
-    key: string;
-    views: number;
-  }>();
+  const rows = await c.env.DB.prepare(sql)
+    .bind(...binds)
+    .all<{
+      key: string;
+      views: number;
+    }>();
   const count = await c.env.DB.prepare(
     `SELECT COUNT(*) AS total FROM (
       SELECT 1 FROM page_view_daily
@@ -403,19 +392,18 @@ app.get("/api/admin/articles", async (c) => {
     `SELECT id, domain, dirs, slug, title, description, tags_json AS tagsJson,
             series, lang, updated_at AS updatedAt
      FROM drafts ORDER BY updated_at DESC`,
-  )
-    .all<{
-      id: string;
-      domain: string;
-      dirs: string;
-      slug: string;
-      title: string;
-      description: string;
-      tagsJson: string;
-      series: string | null;
-      lang: string;
-      updatedAt: number;
-    }>();
+  ).all<{
+    id: string;
+    domain: string;
+    dirs: string;
+    slug: string;
+    title: string;
+    description: string;
+    tagsJson: string;
+    series: string | null;
+    lang: string;
+    updatedAt: number;
+  }>();
   const published = files
     .filter((file) => file.path.endsWith(".md") || file.path.endsWith(".mdx"))
     .map((file) => ({
@@ -436,8 +424,14 @@ app.get("/api/admin/articles", async (c) => {
 const draftSchema = z.object({
   id: z.string().optional(),
   domain: z.string().min(1).max(40),
-  dirs: z.array(z.string().regex(/^[a-z0-9-]+$/)).max(6).default([]),
-  slug: z.string().regex(/^[a-z0-9-]+$/).max(80),
+  dirs: z
+    .array(z.string().regex(/^[a-z0-9-]+$/))
+    .max(6)
+    .default([]),
+  slug: z
+    .string()
+    .regex(/^[a-z0-9-]+$/)
+    .max(80),
   title: z.string().min(1).max(120),
   description: z.string().min(1).max(320),
   tags: z.array(z.string().trim().min(1)).max(12).default([]),
@@ -454,9 +448,7 @@ app.post("/api/admin/drafts", async (c) => {
   const data = parsed.data;
   const id = data.id ?? randomToken(16);
   const now = Date.now();
-  const existing = await c.env.DB.prepare("SELECT 1 FROM drafts WHERE id = ?")
-    .bind(id)
-    .first();
+  const existing = await c.env.DB.prepare("SELECT 1 FROM drafts WHERE id = ?").bind(id).first();
   if (existing) {
     await c.env.DB.prepare(
       `UPDATE drafts SET domain=?, dirs=?, slug=?, title=?, description=?, tags_json=?,
@@ -658,9 +650,7 @@ app.put("/api/admin/raw-article", async (c) => {
   const gh = buildGitHubClient(c.env, session.githubToken, session.user.login);
   const oldSha =
     data.sha ??
-    (await gh
-      .getTree()
-      .then((tree) => tree.find((item) => item.path === data.path)?.sha));
+    (await gh.getTree().then((tree) => tree.find((item) => item.path === data.path)?.sha));
   await gh.putFile(
     data.path,
     data.content,
@@ -683,9 +673,7 @@ app.put("/api/admin/article", async (c) => {
   const gh = buildGitHubClient(c.env, session.githubToken, session.user.login);
   const oldSha =
     data.sha ??
-    (await gh
-      .getTree()
-      .then((tree) => tree.find((item) => item.path === data.path)?.sha));
+    (await gh.getTree().then((tree) => tree.find((item) => item.path === data.path)?.sha));
   const yaml = [
     `title: ${yamlString(data.title)}`,
     `description: ${yamlString(data.description)}`,

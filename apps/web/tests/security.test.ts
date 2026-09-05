@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { csvCell, toCsv } from "../functions/_shared/csv";
 import { parseClient } from "../functions/_shared/analytics";
+import { csvCell, toCsv } from "../functions/_shared/csv";
 
 describe("CSV 安全导出", () => {
   it("以 = + - @ 开头的单元格加单引号防公式注入", () => {
@@ -12,12 +11,18 @@ describe("CSV 安全导出", () => {
   });
 
   it("包含逗号/引号/换行时正确转义", () => {
-    expect(csvCell('a,b')).toBe('"a,b"');
+    expect(csvCell("a,b")).toBe('"a,b"');
     expect(csvCell('say "hi"')).toBe('"say ""hi"""');
   });
 
   it("生成带 BOM 前无需，但行尾为 CRLF", () => {
-    const csv = toCsv(["a", "b"], [[1, 2], [3, 4]]);
+    const csv = toCsv(
+      ["a", "b"],
+      [
+        [1, 2],
+        [3, 4],
+      ],
+    );
     expect(csv).toContain("\r\n");
     expect(csv.split("\r\n")).toHaveLength(3);
   });

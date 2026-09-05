@@ -1,5 +1,5 @@
 import { site } from "@/config/site";
-import { getPublishedPosts, getAllPosts } from "@/lib/posts";
+import { getAllPosts, getPublishedPosts } from "@/lib/posts";
 
 export const prerender = true;
 

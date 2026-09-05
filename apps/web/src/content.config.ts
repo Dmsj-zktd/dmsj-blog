@@ -1,6 +1,6 @@
 import { defineCollection } from "astro:content";
-import { z as schemaZ } from "astro/zod";
 import { glob } from "astro/loaders";
+import { z as schemaZ } from "astro/zod";
 
 const blogSchema = schemaZ.object({
   title: schemaZ.string().min(1).max(120),
