@@ -404,10 +404,6 @@ html[data-mode="dark"] .article .astro-code span {
   padding: 0.08rem 0.42rem;
 }
 
-.article pre {
-  padding-top: 2.45rem;
-}
-
 .reading-progress {
   position: fixed;
   top: 0;
@@ -565,7 +561,7 @@ a.chip:hover {
   color: var(--code-fg);
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
-  padding: 1rem 1.1rem;
+  padding: 2.45rem 1.1rem 1rem;
   font-family: var(--font-mono);
   font-size: 0.875rem;
   line-height: 1.65;

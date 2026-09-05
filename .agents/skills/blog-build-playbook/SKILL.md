@@ -57,6 +57,8 @@ Pages dev 必须传完整 `--d1 DB=<占位 database_id>`，否则会创建未迁
     否则 token 会全部继承外层单色；`data-language` 可在 article.js 渲染为语言徽标。
 14. 需要“每次刷新随机文案”时用 `data-role` + `data-options` JSON + external JS 替换，
     HTML 中保留一个固定兜底文案，SEO meta 不放随机值。
+15. 给 `<pre>` 加语言徽标/复制按钮时，padding-top 要写进 pre 的主规则（写在更早的覆盖规则里会被
+    后面的 `padding` 简写覆盖），并用 E2E 断言徽标底部不越过代码首行。
 
 ## 新增内容域
 

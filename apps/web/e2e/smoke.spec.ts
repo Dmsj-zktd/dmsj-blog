@@ -16,6 +16,14 @@ test("公式、代码块与目录出现在长文中", async ({ page }) => {
   await expect(
     page.locator(".code-lang").filter({ hasText: "TS" }).first(),
   ).toBeVisible();
+  const badgeBox = await page
+    .locator(".code-lang")
+    .first()
+    .boundingBox();
+  const firstLineBox = await page.locator(".article pre code .line").first().boundingBox();
+  expect(badgeBox && firstLineBox ? badgeBox.y + badgeBox.height <= firstLineBox.y : false).toBe(
+    true,
+  );
   await expect(
     page.locator('.astro-code span[style*="--shiki-light"]').first(),
   ).toBeVisible();

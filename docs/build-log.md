@@ -121,3 +121,12 @@
   JSON options，`public/scripts/tagline.js` 每次加载随机替换；无 JS 时显示 `tagline` 兜底。
 - 说明：SEO/HTML meta 仍用固定描述，避免爬虫每次拿到不同标题；视觉金句随机不影响检索。
 - 验证：E2E 10/10 通过。
+
+## 2026-09-06 徽标遮挡修复与本地 OAuth 配置
+
+- 现象：语言徽标遮挡代码首行。
+- 根因：`.article pre` 有两处规则，后出现的 `padding: 1rem 1.1rem` 覆盖了预留的顶部 padding。
+- 解决：删除提前追加的 padding 覆盖，把主规则统一为 `padding: 2.45rem 1.1rem 1rem`，
+  并新增 E2E 断言：徽标底部 <= 代码首行顶部。
+- OAuth：站主提供 Client ID/Secret，写入 gitignore 的 `.dev.vars`；
+  `SITE_URL=http://localhost:8788`、`ALLOWED_GITHUB_LOGIN=Dmsj-zktd`；本地登录入口已返回 200。
