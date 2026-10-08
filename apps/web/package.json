@@ -18,7 +18,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.3.1",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.13.5",
+    "hono": "^4.13.7",
     "katex": "^0.18.5",
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
