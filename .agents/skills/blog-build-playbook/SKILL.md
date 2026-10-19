@@ -24,6 +24,7 @@ pnpm install
 pnpm check          # astro check + vue-tsc + tsc
 pnpm test
 pnpm build          # admin -> astro build -> pagefind
+pnpm budgets        # gzip JS/CSS 与单实验 chunk 预算
 pnpm dev            # Astro dev
 pnpm dev:admin      # Vue admin dev
 pnpm lint           # Biome（受限沙箱需授权用户缓存）
@@ -51,14 +52,17 @@ Pages dev 必须传完整 `--d1 DB=<占位 database_id>`，否则会创建未迁
 9. Biome 需要写 `~/.biome`；受限沙箱中运行时需授权，CI 不受影响。
 10. Vue SFC 在模板中使用某个组件时必须在 `<script setup>` import；漏 import 会渲染成裸自定义元素。
 11. E2E 在 `apps/web` 下用 `node scripts/serve-dist.mjs --dir dist` 做前台静态服务器，不要用已后台化的 `astro preview`。
-12. 动效/图标优先复用：社交图标用 `simple-icons`（`siGithub`/`siGitee`），静态页动效用
-    CSS keyframes + external JS，不引 GSAP/Framer Motion；粒子 Canvas 遵守 reduced-motion。
+12. Signal Lab 不再使用随机主题、粒子 Canvas 或鼠标光晕。动效走 CSS/View Transitions，
+    只用于状态反馈；高对比通过 `data-contrast="high"`，主题只接受 `auto|light|dark`。
 13. Shiki 双主题须给每个 token 的 `.astro-code span` 设 `color:var(--shiki-light/dark)`，
     否则 token 会全部继承外层单色；`data-language` 可在 article.js 渲染为语言徽标。
-14. 需要“每次刷新随机文案”时用 `data-role` + `data-options` JSON + external JS 替换，
-    HTML 中保留一个固定兜底文案，SEO meta 不放随机值。
-15. 给 `<pre>` 加语言徽标/复制按钮时，padding-top 要写进 pre 的主规则（写在更早的覆盖规则里会被
-    后面的 `padding` 简写覆盖），并用 E2E 断言徽标底部不越过代码首行。
+14. 站点文案保持稳定，不使用运行时随机金句。阅读视角用 `?lens=` + localStorage，
+    默认 `builder`，HTML 必须保留完整无 JS 内容。
+15. 文章 `data-pagefind-body` 只应有一个；搜索摘要先解析再由 textContent/允许的 `<mark>`
+    重建，禁止把 Pagefind HTML 直接写入 DOM。
+16. 实验统一由 `apps/web/src/lib/labs.ts` 注册，页面通过 slug 引用；修改公式后运行 `pnpm labs`。
+    浏览器端评估器位于 `src/lib/lab-evaluators/`，由 `lab-client.ts` 按 slug 动态加载；
+    新增实验必须同步服务器模型、按需评估器和一致性测试。
 
 ## 新增内容域
 
@@ -82,6 +86,7 @@ pnpm lint
 pnpm check
 pnpm test
 pnpm build
+pnpm budgets
 ```
 
 遇到新问题：先复现验证 → 写入 `docs/build-log.md` → 再考虑是否更新本 SKILL。

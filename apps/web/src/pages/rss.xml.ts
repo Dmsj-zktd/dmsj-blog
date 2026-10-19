@@ -23,6 +23,7 @@ export async function GET() {
       <guid isPermaLink="true">${site.url}${post.urlPath}</guid>
       <pubDate>${post.date.toUTCString()}</pubDate>
       <description>${escapeXml(post.description)}</description>
+      ${post.tags.map((tag) => `<category>${escapeXml(tag)}</category>`).join("")}
     </item>`,
     )
     .join("\n");

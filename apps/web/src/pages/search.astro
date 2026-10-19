@@ -1,91 +1,218 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { ui } from "@/i18n/zh-CN";
+import { contentDomains } from "@dmsj/content-model";
+import { getPublishedPosts } from "@/lib/posts";
+
+const posts = await getPublishedPosts();
+const series = [...new Set(posts.map((post) => post.series).filter(Boolean))].sort();
+const tags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) => a.localeCompare(b, "zh-CN"));
+const years = [...new Set(posts.map((post) => String(post.date.getFullYear())))].sort().reverse();
+const kinds = [
+  ["note", "笔记"],
+  ["flagship", "旗舰研究"],
+  ["experiment", "实验笔记"],
+  ["lab", "实验"],
+  ["synthesis", "综合研究"],
+  ["project", "项目档案"],
+  ["essay", "工作方法"],
+] as const;
 ---
 
-<BaseLayout title={ui.search.title}>
-  <div class="shell page-wrap search-page">
-    <p class="eyebrow">Search</p>
-    <h1>{ui.search.title}</h1>
-    <form id="search-form" role="search">
-      <label class="visually-hidden" for="search-input">{ui.search.placeholder}</label>
-      <input
-        id="search-input"
-        type="search"
-        autocomplete="off"
-        enterkeyhint="search"
-        placeholder={ui.search.placeholder}
-      />
-    </form>
-    <p id="search-status" class="muted" role="status">{ui.search.initial}</p>
-    <ol id="search-results" class="search-results"></ol>
+<BaseLayout title="搜索 · DMSJ Signal Lab" description="搜索 DMSJ 的研究笔记、实验和工程档案。">
+  <div class="shell search-page" data-search-page>
+    <header class="page-hero">
+      <p class="mono-label">Pagefind / local index</p>
+      <h1>搜索研究，而不是翻找目录。</h1>
+      <p class="page-hero__lead">
+        索引在构建期生成，不上传搜索词。也可以使用标题栏的 <kbd>⌘K</kbd> 命令面板。
+      </p>
+    </header>
+
+    <section class="search-workspace" aria-labelledby="search-title">
+      <h2 id="search-title" class="visually-hidden">全站搜索</h2>
+      <form id="search-form" role="search" data-search-form>
+        <label class="visually-hidden" for="search-input">搜索关键词</label>
+        <div class="search-field">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+            <circle cx="10.7" cy="10.7" r="6.2"></circle>
+            <path d="m15.3 15.3 4.2 4.2"></path>
+          </svg>
+          <input
+            id="search-input"
+            type="search"
+            autocomplete="off"
+            enterkeyhint="search"
+            placeholder="输入概念、论文、语言或系统名"
+            data-search-input
+          />
+        </div>
+        <div class="search-filters">
+          <label>
+            <span>内容域</span>
+            <select data-search-filter="domain">
+              <option value="">全部</option>
+              {contentDomains.map((domain) => <option value={domain.key}>{domain.label}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>文章类型</span>
+            <select data-search-filter="kind">
+              <option value="">全部</option>
+              {kinds.map(([value, label]) => <option value={value}>{label}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>年份</span>
+            <select data-search-filter="year">
+              <option value="">全部</option>
+              {years.map((year) => <option value={year}>{year}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>系列</span>
+            <select data-search-filter="series">
+              <option value="">全部</option>
+              {series.map((item) => <option value={item}>{item}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>标签</span>
+            <select data-search-filter="tag">
+              <option value="">全部</option>
+              {tags.map((tag) => <option value={tag}>#{tag}</option>)}
+            </select>
+          </label>
+        </div>
+      </form>
+      <p id="search-status" class="search-status" role="status" data-search-status>
+        输入至少 1 个字符开始搜索
+      </p>
+      <ol id="search-results" class="search-results" data-search-results></ol>
+      <p class="search-fallback">
+        搜索需要 JavaScript。无脚本时可从
+        <a href="/archive/">归档</a>、<a href="/tags/">标签</a>和<a href="/frontier/">前沿研究</a>导航。
+      </p>
+    </section>
   </div>
 </BaseLayout>
 
-<script is:inline src="/scripts/search.js" defer></script>
-
-<style is:global>
-  .search-page input {
-    width: 100%;
-    border: 1px solid var(--hairline);
-    background: var(--bg-elev);
-    color: var(--fg);
-    border-radius: var(--radius);
-    padding: 0.7rem 0.95rem;
-    font: inherit;
-    margin-block: 0.8rem;
+<style>
+  kbd {
+    border: 1px solid var(--line);
+    border-radius: 0.25rem;
+    background: var(--surface);
+    padding: 0.05rem 0.3rem;
+    font: 0.72rem var(--font-mono);
   }
 
-  .search-page input:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
+  .search-workspace {
+    padding-block: clamp(2rem, 5vw, 4rem);
+    border-block-start: 1px solid var(--line);
+  }
+
+  .search-field {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    border-block-end: 2px solid var(--ink);
+    padding: 0.8rem 0;
+  }
+
+  .search-field svg {
+    flex: 0 0 auto;
+    color: var(--ink-faint);
+  }
+
+  .search-field input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--ink);
+    font-size: clamp(1.5rem, 4vw, 3rem);
+    font-weight: 520;
+    letter-spacing: -0.04em;
+  }
+
+  .search-field input::placeholder {
+    color: var(--ink-faint);
+  }
+
+  .search-filters {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-block-start: 0.8rem;
+  }
+
+  .search-filters label {
+    display: grid;
+    gap: 0.25rem;
+    color: var(--ink-faint);
+    font: 0.62rem var(--font-mono);
+  }
+
+  .search-filters select {
+    min-height: 2.75rem;
+    border: 1px solid var(--line);
+    border-radius: 0.25rem;
+    background: var(--surface);
+    color: var(--ink);
+    padding: 0.35rem 0.5rem;
+    font-size: 0.76rem;
+  }
+
+  .search-status {
+    margin: 1rem 0;
+    color: var(--ink-faint);
+    font: 0.7rem var(--font-mono);
   }
 
   .search-results {
     display: grid;
-    gap: 0.8rem;
-    margin-block-start: 1rem;
+    margin: 0;
     padding: 0;
+    border-block-start: 1px solid var(--line);
     list-style: none;
   }
 
-  .search-result {
-    border: 1px solid var(--hairline);
-    border-radius: var(--radius);
-    background: var(--bg-elev);
-    padding: 0.9rem 1rem;
+  .search-results :global(.search-result) {
+    border-block-end: 1px solid var(--line);
+    padding-block: 0.9rem;
   }
 
-  .search-result a {
-    color: var(--fg);
-    font-family: var(--font-display);
-    font-weight: 680;
+  .search-results :global(a) {
+    color: var(--ink);
+    font-size: 1.05rem;
+    font-weight: 590;
     text-decoration: none;
   }
 
-  .search-result a:hover {
-    color: var(--accent);
+  .search-results :global(a:hover) {
+    color: var(--ai);
   }
 
-  .search-result p {
+  .search-results :global(p) {
     margin: 0.3rem 0 0;
-    color: var(--fg-soft);
-    font-size: 0.9rem;
+    color: var(--ink-soft);
+    font-size: 0.84rem;
   }
 
-  .search-marks {
-    background: var(--accent-soft);
-    color: var(--fg);
-    border-radius: 2px;
-    padding: 0 0.1em;
+  .search-results :global(.search-marks) {
+    background: color-mix(in srgb, var(--embedded) 26%, transparent);
+    color: var(--ink);
   }
 
-  .visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
+  .search-fallback {
+    margin-block-start: 2rem;
+    color: var(--ink-faint);
+    font-size: 0.74rem;
+  }
+
+  @media (max-width: 760px) {
+    .search-filters {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 </style>

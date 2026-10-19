@@ -1,4 +1,8 @@
-const CSRF_HEADER = { "x-dmsj-csrf": "1" };
+let csrfToken = "";
+
+export function setCsrfToken(value: string | null | undefined): void {
+  csrfToken = value ?? "";
+}
 
 export class ApiError extends Error {
   status: number;
@@ -9,11 +13,12 @@ export class ApiError extends Error {
 }
 
 async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
+  const method = init.method ?? "GET";
   const response = await fetch(url, {
     credentials: "same-origin",
     ...init,
     headers: {
-      ...(init.body ? CSRF_HEADER : {}),
+      ...(method !== "GET" && method !== "HEAD" && csrfToken ? { "x-dmsj-csrf": csrfToken } : {}),
       ...(init.headers ?? {}),
     },
   });
@@ -22,9 +27,11 @@ async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
     const message =
       body && typeof body.error === "string"
         ? body.error
-        : body && Array.isArray(body.error)
-          ? JSON.stringify(body.error)
-          : `HTTP ${response.status}`;
+        : body?.error && typeof body.error === "object" && "message" in body.error
+          ? String(body.error.message)
+          : body && Array.isArray(body.error)
+            ? JSON.stringify(body.error)
+            : `HTTP ${response.status}`;
     throw new ApiError(message, response.status);
   }
   if (response.status === 204) return undefined as T;
@@ -64,6 +71,7 @@ export interface SessionUser {
 
 export interface MeResponse {
   user: SessionUser | null;
+  csrfToken?: string;
 }
 
 export interface OverviewResponse {
@@ -96,6 +104,24 @@ export interface DraftListItem {
   tags: string[];
   series: string | null;
   lang: string;
+  metadata?: {
+    kind?: string;
+    topic?: string | null;
+    maturity?: string | null;
+    sources?: unknown[];
+    evidence?: {
+      level?: string;
+      scope?: string;
+      caveats?: string[];
+    } | null;
+    lab?: string | null;
+    related?: string[];
+    verifiedAt?: string | null;
+    question?: string | null;
+    conclusion?: string | null;
+    takeaways?: string[];
+  };
+  version?: number;
   updatedAt: number;
 }
 

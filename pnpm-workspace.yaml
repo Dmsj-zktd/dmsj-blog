@@ -1,5 +1,6 @@
 packages:
   - "apps/*"
+  - "packages/*"
 
 onlyBuiltDependencies:
   - esbuild
@@ -10,5 +11,14 @@ allowBuilds:
   esbuild: true
   workerd: true
   "@biomejs/biome": true
+
+overrides:
+  "undici@>=8.0.0 <8.10.2": 8.10.2
+  "devalue@<=5.9.2": 5.9.3
+  "http-cache-semantics@<=4.2.0": 4.3.0
+  "source-map-js@<1.2.2": 1.2.2
+  "smol-toml@<=1.8.0": 1.9.1
+  "katex@<0.18.2": 0.18.5
+  "sharp@<0.35.5": 0.35.5
 
 verifyDepsBeforeRun: false

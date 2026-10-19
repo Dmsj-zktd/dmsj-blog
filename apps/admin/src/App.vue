@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-import { del, type MeResponse, type SessionUser } from "./api";
+import { get, post, setCsrfToken, type MeResponse, type SessionUser } from "./api";
 import LoginView from "./views/LoginView.vue";
 
 const route = useRoute();
@@ -15,8 +15,8 @@ const isLogin = computed(() => route.path === "/login");
 async function checkAuth() {
   checking.value = true;
   try {
-    const response = await fetch("/api/auth/me", { credentials: "same-origin" });
-    const data = (await response.json()) as MeResponse;
+    const data = await get<MeResponse>("/api/auth/me");
+    setCsrfToken(data.csrfToken);
     user.value = data.user;
     if (!data.user && !isLogin.value) {
       await router.replace("/login");
@@ -29,7 +29,7 @@ async function checkAuth() {
 }
 
 async function logout() {
-  await del("/api/auth/logout");
+  await post("/api/auth/logout");
   await router.replace("/login");
 }
 
@@ -43,12 +43,15 @@ onMounted(() => {
   <LoginView v-else-if="isLogin" />
   <div v-else class="admin-shell">
     <aside class="admin-aside">
-      <div class="admin-brand">DMSJ · 管理</div>
+      <div class="admin-brand">
+        <span>DMSJ · Signal Lab</span>
+        <small>EDITORIAL WORKBENCH</small>
+      </div>
       <nav class="admin-nav">
         <RouterLink to="/dashboard">访客统计</RouterLink>
         <RouterLink to="/articles">文章管理</RouterLink>
         <RouterLink to="/audit">审计日志</RouterLink>
-        <button type="button" @click="logout">退出登录</button>
+        <button type="button" @click="logout">退出登录 · {{ user?.name || user?.login || "admin" }}</button>
       </nav>
     </aside>
     <main class="admin-main">

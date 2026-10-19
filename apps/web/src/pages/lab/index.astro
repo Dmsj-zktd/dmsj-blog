@@ -1,0 +1,98 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { labDefinitions } from "@/lib/labs";
+import { getFrontierTopic } from "@dmsj/content-model";
+---
+
+<BaseLayout title="实验台 · DMSJ Signal Lab" description="用软件模型验证前沿系统论文中的关键约束，所有结果均标注证据边界。">
+  <header class="shell page-hero">
+    <p class="mono-label">Research instruments / software-only</p>
+    <h1>把论文里的结论，变成可以拨动的参数。</h1>
+    <p class="page-hero__lead">
+      十个轻量模型覆盖 KV 容量、注意力 IO、推理预算、Agent 工具循环、MoE 路由、TinyML、RISC-V、Chiplet、稀疏计算与嵌入式密码学。
+      结果用于建立直觉，不伪装成硬件实测。
+    </p>
+  </header>
+
+  <div class="shell section">
+    <div class="lab-index">
+      {
+        labDefinitions.map((lab, index) => {
+          const topic = getFrontierTopic(lab.topic);
+          return (
+            <a class="lab-index__item" href={`/lab/${lab.slug}/`}>
+              <span class="lab-index__num">{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <span class="lab-index__topic">{topic?.shortTitle ?? lab.topic}</span>
+                <h2>{lab.shortTitle}</h2>
+                <p>{lab.description}</p>
+              </div>
+              <span class="lab-index__arrow" aria-hidden="true">↗</span>
+            </a>
+          );
+        })
+      }
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .lab-index {
+    border-block-start: 1px solid var(--line);
+  }
+
+  .lab-index__item {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
+    gap: clamp(0.7rem, 2vw, 1.5rem);
+    align-items: start;
+    border-block-end: 1px solid var(--line);
+    color: var(--ink);
+    padding-block: 1.25rem;
+    text-decoration: none;
+  }
+
+  .lab-index__item:hover {
+    background: color-mix(in srgb, var(--ai-soft) 30%, transparent);
+    text-decoration: none;
+  }
+
+  .lab-index__num,
+  .lab-index__topic {
+    color: var(--ink-faint);
+    font: 0.65rem var(--font-mono);
+  }
+
+  .lab-index__topic {
+    color: var(--embedded);
+  }
+
+  .lab-index h2 {
+    margin: 0.25rem 0 0.35rem;
+    font-size: clamp(1.2rem, 2.3vw, 1.65rem);
+    font-weight: 610;
+    letter-spacing: -0.03em;
+  }
+
+  .lab-index p {
+    max-width: 48rem;
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.83rem;
+  }
+
+  .lab-index__arrow {
+    color: var(--ai);
+    font-size: 1.4rem;
+  }
+
+  @media (max-width: 620px) {
+    .lab-index__item {
+      grid-template-columns: 2rem minmax(0, 1fr);
+    }
+
+    .lab-index__arrow {
+      display: none;
+    }
+  }
+</style>

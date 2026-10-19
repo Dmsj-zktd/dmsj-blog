@@ -1,53 +1,64 @@
-# 设计系统与参考（Design System & References）
+# DMSJ Signal Lab 设计系统
 
-## 原则
+## 视觉主张
 
-- 内容优先：无玻璃拟态、无彩虹渐变、无装饰性动效；动效只服务于状态反馈。
-- 克制用色：任何页面主色不超过一个强调色，其余靠层级（纸面、墨色、发丝线）表达。
-- 排印即品牌：五种主题差异主要在字体气质与色温，而非布局。
-- 可读性：正文行高 ≥ 1.7，阅读栏宽约 46rem，中英文混排走系统字体栈。
-- 无障碍：焦点可见、语义化结构、`prefers-reduced-motion`、AA 对比。
+一套语言，两种密度：
 
-## 借鉴对象与提炼点
+- **Signal Lab**：发现、主题入口、研究雷达与研究图谱，使用 12 栏非对称网格、标尺线、真实的文章关系和少量技术图形。
+- **Research Journal**：长文阅读，降低装饰密度，保持约 70ch 的正文宽度、清晰来源栏、公式、代码和实验的稳定节奏。
 
-| 对象 | 提炼 |
-| --- | --- |
-| Overreacted | 超高可读性的纸面对比、链接强调色克制 |
-| Brandur / 编辑式博客 | 衬线标题 + 阅读留白 + 单一强调色 |
-| Tonsky / Ciechanowski | 技术内容的排版纪律、图表与代码细节 |
-| Julia Evans | 温暖、可亲近的工程叙述语气 |
-| Antfu | “少即是多”的工艺感与留白控制 |
+颜色只表达语义，不做随机换肤：
 
-## 主题 token 语义
+- 蓝 `--ai`：推理、Agent、数据与可交互状态。
+- 暖橙 `--embedded`：硅、嵌入式、风险与约束。
+- `--paper` / `--ink` / `--line`：纸面、墨色和结构线。
+- `--success` / `--warning` / `--danger`：系统反馈。
 
-所有主题通过以下 CSS 变量驱动，组件禁止写死颜色：
+完整 token 位于 `apps/web/src/styles/global.css`。组件不得写死主题色。
 
-`--bg`、`--bg-elev`、`--fg`、`--fg-soft`、`--fg-faint`、`--accent`、
-`--accent-soft`、`--hairline`、`--selection`、`--code-bg`、`--code-fg`、`--kbd-bg`。
+## 字体
 
-主题列表在 `apps/web/src/site/themes.ts`；色值实现见 `apps/web/src/styles/global.css`。
+- UI 与标题：Instrument Sans Variable。
+- Research Journal 西文正文：Newsreader Variable。
+- 中文：PingFang SC / Hiragino Sans GB / Noto Sans CJK SC / Microsoft YaHei 系统栈。
+- 代码与元数据：系统等宽字体，避免额外字体下载。
 
-## 交互规则
+## 交互
 
-- 主题：访客自选持久化到 localStorage；未配置时每次访问随机；`?theme=` 可预览。
-- 代码块：复制按钮仅在 hover/focus 显示；语法高亮由 Shiki 在构建期生成。
-- 搜索：Pagefind 构建期中文索引，前端无搜索服务器依赖。
-- 页面载入：5 种动效（淡入上滑/缩放去模糊/左右滑入/旋转渐显）由 `effect-init.js` 随机选一；
-  遵守 `prefers-reduced-motion`，无 JS 时页面正常显示。
-- 常驻动态：极低透明度环境粒子 canvas + 桌面端鼠标微光；内容层 `z-index:1` 保证不遮可读性；
-  触屏与减少动效时自动关闭。
-- 交互反馈：按钮/卡片按压下沉、悬停抬升、focus-visible 描边，全部 CSS 实现。
+- 页面转场：原生跨文档 View Transition；不支持时普通导航。
+- 动效只用于章节状态、实验反馈、目录、复制与菜单，时长 120–360ms。
+- 不使用 WebGL、滚动劫持、随机整页入场、鼠标光晕或常驻粒子。
+- 实验先服务端输出静态结果，再由轻量脚本按需更新；关闭 JS 仍能读到结论。
+- 所有控件至少 44px 触控面积，焦点可见，支持减少动态、强制颜色与 200% 缩放。
 
-## 选型结论（先复用后自研）
+## 页面组件
 
-- 图标：`simple-icons`（官方品牌路径，GitHub/Gitee）编译期取路径，不发外部请求；
-- 动效：静态多页站点用“CSS 动画 + 原生 external JS”，不引入 Framer Motion/GSAP 运行时，
-  避免为每次全页加载付框架成本；现代浏览器可另用 CSS View Transitions 增强；
-- 粒子/光晕：纯 Canvas 自绘约 2KB，无第三方依赖。
+- `SignalMap`：由前沿主题注册表生成，桌面为关系图，窄屏降级为可访问列表。
+- `AudienceSwitch`：技术同行 / 招聘评审 / 兴趣探索；只调整文案与推荐路径，不隐藏内容。
+- `EvidenceCard`：成熟度、证据等级、核查日期、局限和配套实验。
+- `ArticleCard`：内容域、文章类型、日期、阅读时间、证据状态和标题。
+- `LabExplorer`：参数化软件模型，默认结论、实时指标、假设和证据边界同时可见。
+- 研究雷达：评分字段公开，编辑权重与来源可追溯。
 
-## 素材来源结论
+## 内容与证据
 
-- 图标：系统内联 SVG，不引入图标字体；
-- 图片：无外部图片站依赖，示例内容以代码/表格/公式承载信息；
-- 字体：Latin 使用本地 Fontsource Inter Variable；CJK 使用系统字体栈；
-- 图表：前台不使用图表库；后台统计用 SVG 轻量可视化。
+- 每篇研究笔记必须声明 `kind`、`topic`、`maturity`、`sources`、`evidence` 和 `verifiedAt`。
+- “论文报告”“本地模拟”“分析推演”不得混写。
+- 文章正文、目录、来源和静态实验结论必须不依赖 JavaScript 可读。
+- 站内引用使用论文、官方规范、文档或仓库；外部链接由独立定时任务检查，不阻塞构建。
+
+## 可复用素材与技能
+
+- [参考账本](design/reference-ledger.md)：记录 25 个设计平台和作品的借鉴原则、风险与边界，不复制素材。
+- [第三方技能锁](design/vendor-lock.md)：记录本地指令快照的来源、commit、许可证与校验值。
+- `.agents/skills/dmsj-signal-lab`：项目级设计约束与视觉审查流程。
+- `.agents/skills/frontend-design`：Anthropic 的视觉方向与反模板化设计方法。
+- `.agents/skills/web-design-guidelines`：Vercel Web Interface Guidelines 的固定本地快照。
+
+## 质量基线
+
+- WCAG 2.2 AA；axe 无 serious/critical。
+- 320–2560px 无横向溢出。
+- 首页首屏 JS ≤ 60KB gzip，文章页 ≤ 35KB；CSS ≤ 50KB gzip。
+- 移动端 LCP ≤ 2.5s、CLS ≤ 0.05、INP ≤ 200ms，Lighthouse 四项 ≥ 95（目标值）。
+- Chromium、Firefox、WebKit 自动回归，关键页面保存 390 / 768 / 1440 视觉基线。

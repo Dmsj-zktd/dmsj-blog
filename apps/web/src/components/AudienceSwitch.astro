@@ -1,0 +1,97 @@
+---
+import type { AudienceLens } from "@dmsj/content-model";
+import { audienceDefinitions } from "@/site/audiences";
+
+interface Props {
+  compact?: boolean;
+  label?: string;
+}
+
+const { compact = false, label = "选择阅读视角" } = Astro.props;
+const current = "builder" as AudienceLens;
+---
+
+<div class:list={["audience-switch", compact && "audience-switch--compact"]} role="group" aria-label={label} data-audience-switch>
+  {
+    audienceDefinitions.map((audience) => (
+      <button
+        type="button"
+        class="audience-switch__item"
+        data-set-lens={audience.id}
+        aria-pressed={audience.id === current ? "true" : "false"}
+        title={compact ? audience.label : undefined}
+      >
+        <span>{compact ? audience.shortLabel : audience.label}</span>
+        {!compact && <small>{audience.eyebrow}</small>}
+      </button>
+    ))
+  }
+</div>
+
+<style>
+  .audience-switch {
+    display: inline-grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.25rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+    padding: 0.25rem;
+  }
+
+  .audience-switch__item {
+    min-height: 2.25rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-soft);
+    padding: 0.3rem 0.75rem;
+    cursor: pointer;
+    line-height: 1.15;
+    transition:
+      background-color 140ms ease,
+      color 140ms ease;
+  }
+
+  .audience-switch__item span {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 590;
+    white-space: nowrap;
+  }
+
+  .audience-switch__item small {
+    display: block;
+    margin-block-start: 0.12rem;
+    color: var(--ink-faint);
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+  }
+
+  .audience-switch__item[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .audience-switch__item[aria-pressed="true"] small {
+    color: color-mix(in srgb, var(--paper) 72%, transparent);
+  }
+
+  .audience-switch--compact {
+    border-radius: 0.65rem;
+  }
+
+  .audience-switch--compact .audience-switch__item {
+    min-height: 2rem;
+    border-radius: 0.48rem;
+    padding-inline: 0.55rem;
+  }
+
+  @media (max-width: 720px) {
+    .audience-switch__item {
+      padding-inline: 0.55rem;
+    }
+  }
+</style>

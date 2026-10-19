@@ -144,3 +144,74 @@
   线上验证 `/api/auth/me`、`/api/track`、`login-start` 均 200/204。
 - 待开启：仓库变量 `ENABLE_CF_DEPLOY=true` + Cloudflare API Token 后，
   后台发文提交 main 即可触发 CI 自动部署。
+
+## 2026-10-18 Signal Lab v2 重构
+
+- 现象：并行任务同时改写公共布局，导致搜索触发器、lens 脚本和页面版本互相覆盖；
+  内容初稿覆盖了 10 个主题，但旗舰/实验的实际汉字数明显低于目标。
+- 验证：用 `git status`、文件时间戳与逐页截图确认冲突；用 CJK 正则统计每篇笔记字数；
+  用 Playwright 在 320–1440px 检查 DOM、搜索、无 JS 与溢出。
+- 根因：公共前端没有先锁定文件所有权；内容代理完成了结构覆盖，但没有在提交前做长度与
+  证据数量门禁。
+- 解决：公共页面统一由主线程收口；`site.js` 统一搜索、lens 与命令面板；实验统一到
+  `lib/labs.ts`；新增 content completeness、labs、axe、视觉与多浏览器检查。
+- 后续规避：子任务必须声明独占路径；最终集成前以 `git status` 与构建产物复核，不能只看
+  子代理完成声明；内容长度/来源数量纳入自动测试。
+
+## 2026-10-18 Playwright 本机 Firefox 运行库
+
+- 现象：Chromium/WebKit 正常，Playwright Firefox 153 在本机 Windows 启动时报
+  `side-by-side configuration is incorrect`。
+- 验证：直接执行 Playwright Firefox 二进制得到同样错误；重新下载 Firefox 后仍复现，
+  说明不是测试或站点代码问题。
+- 解决：本地 `test:e2e` 覆盖 Chromium + WebKit；CI Ubuntu runner 设置 `CI=1` 时自动加入
+  Firefox project，并安装三套浏览器。Firefox 的通过结论只以 CI 或具备运行库的环境为准。
+- 后续规避：不要用 Chromium 的结果冒充 Firefox 通过；发布前检查 CI 浏览器 job。
+
+## 2026-10-19 依赖审计、CSP 内联启动与文章性能
+
+- 现象：官方 npm audit 在生产依赖中发现 24 个漏洞；文章页 Lighthouse 只有 86 分，LCP 3.3s。
+- 验证：漏洞主要来自 Astro/Vue 间接依赖；文章首次加载了完整 LabExplorer（约 124KB JS）。
+- 根因：lockfile 中的间接版本过旧；阅读页把“配套实验”做成了强制加载的可交互大组件；KaTeX 和阅读字体阻塞首屏。
+- 解决：使用 pnpm overrides 升级 undici、devalue、http-cache-semantics、source-map-js、smol-toml、katex、sharp，并升级 Hono；文章页改用实验摘要 + 独立 `/lab/` 入口；公式/阅读字体异步加载并提供 noscript；内联主题启动脚本并加入 CSP hash；搜索触发器补 aria-label；阅读进度计算移入 rAF。
+- 结果：`pnpm audit --prod --registry=https://registry.npmjs.org` 无已知漏洞；移动端首页 Lighthouse 97/100/100/100（LCP 1.7s，CLS 0），综合文章 93/100/100/100（LCP 2.6s，CLS 0）。
+
+## 2026-10-19 内容长度门禁
+
+- 现象：首轮并行内容虽然覆盖 10 个主题，但多数正文只有几百个中文字符，低于计划要求的深度。
+- 验证：剔除 frontmatter/code 后按 CJK 字符统计，旗舰文与实验文均明显不足。
+- 解决：按旗舰 ≥3,000、实验 ≥1,500、综合 ≥2,500 个正文中文字符扩写，并加入自动测试；`tests/content.test.ts` 通过。
+- 后续规避：结构完整性测试不能替代有效内容长度；来源数量、正文长度和 lab 映射必须同时通过。
+
+## 2026-10-19 最终性能收口
+
+- 现象：完整实验逻辑仍被打成一个 123.9KB（37.8KB gzip）的客户端包，超过“单实验 ≤20KB”预算；
+  本地测试服务器不压缩 HTML/CSS，也让文章 LCP 被低估为 2.6s。
+- 验证：检查 Vite 产物与 Lighthouse 网络请求，确认实验评估器和未压缩文档同时影响预算。
+- 解决：十个评估器按 slug 拆分为 0.56–0.65KB gzip 的按需模块；共享启动脚本为 1.9KB gzip；
+  评估器与服务器模型加入输出一致性测试。本地静态服务器增加 Brotli/gzip、缓存头、nosniff 和
+  输出目录边界检查。
+- 结果：Lighthouse 13.5 移动模拟下，首页 100/100/100/100（LCP 1.4s）、文章
+  97/100/100/100（LCP 2.2s）、实验页 100/100/100/100（LCP 1.6s），CLS 与 TBT 均为 0。
+
+## 2026-10-19 Codex Security 差异审查
+
+- 覆盖：当前工作树完整 diff，64/64 review items。
+- 发现：生产配置可用可选环境标记回退到开发行为；OAuth 登录发起未限流，
+  两者均判定为 low。
+- 解决：仅显式 `ENVIRONMENT=development` 使用开发行为；登录发起增加每 IP 每小时
+  30 次限流；同时加固 JSON-LD 转义、来源 URL 协议、草稿乐观锁、发布版本删除、
+  管理写失败审计与 CSV 前置空白。
+- 结果：`pnpm check`、36 项单测、Lint、155 页构建、40 项 Chromium/WebKit E2E、
+  12 项 axe、18 项视觉回归和本地 Functions 冒烟均通过。
+
+## 2026-10-19 Preview 发布
+
+- 发布：Cloudflare Pages `dmsj-blog`，分支 `signal-lab-v2`。
+- 地址：`https://signal-lab-v2.dmsj-blog.pages.dev`。
+- 首次发布后发现 Preview 的统计信标仍可能写入绑定的 D1；已在 Functions 层检测
+  `CF_PAGES_BRANCH !== "main"` 并直接返回 204，同时加入单元测试。
+- 重新发布后：远程 Chromium 核心页面、390px 布局和实验交互通过；远程 WebKit
+  核心页面和 390px 布局通过，交互回归仍由本地 WebKit 全量 E2E 覆盖。
+- 远程 API：`/api/auth/me` 200、`/api/auth/config` 200、Preview 统计 204、
+  未认证后台写入按配置 fail-closed。

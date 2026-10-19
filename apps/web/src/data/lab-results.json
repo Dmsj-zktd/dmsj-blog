@@ -1,0 +1,426 @@
+{
+  "kv-budget": {
+    "topic": "paged-kv-cache",
+    "title": "KV Cache 容量与分页预算",
+    "evidence": "软件预算模型；不代表特定 GPU 或推理框架的实测吞吐。",
+    "conclusion": "按默认参数，每个 token 的 KV Cache 为 128 KiB；16 路并发、8K 上下文需要约 16 GiB，仅缓存本身就已经接近一张大显存加速卡。",
+    "inputs": {
+      "layers": 32,
+      "kvHeads": 8,
+      "headDim": 128,
+      "sequence": 8192,
+      "concurrency": 16,
+      "bytes": 2
+    },
+    "result": {
+      "verdict": "缓存仍可容纳，但延迟会随并发和块分配碎片上升；继续观察尾延迟。",
+      "metrics": [
+        {
+          "id": "bytesPerToken",
+          "label": "每 token 缓存",
+          "value": 131072,
+          "unit": "B",
+          "detail": "layers × KV heads × head_dim × 2 × bytes",
+          "tone": "ai"
+        },
+        {
+          "id": "totalGiB",
+          "label": "总缓存",
+          "value": 16,
+          "unit": "GiB",
+          "detail": "不含权重、激活与 allocator 余量",
+          "tone": "embedded"
+        },
+        {
+          "id": "tokensPerMiB",
+          "label": "每 MiB 可存 token",
+          "value": 8,
+          "unit": "tokens",
+          "detail": "单序列容量，不含碎片",
+          "tone": "neutral"
+        }
+      ]
+    }
+  },
+  "attention-roofline": {
+    "topic": "hardware-aware-attention",
+    "title": "注意力 IO 与 Roofline",
+    "evidence": "量级估算模型；忽略 cache line、bank conflict 与 kernel launch 开销。",
+    "conclusion": "长序列注意力的算术强度随序列长度上升，但朴素实现仍会产生大量 HBM 往返；FlashAttention 的关键是把可复用块留在片上 SRAM。",
+    "inputs": {
+      "sequence": 4096,
+      "heads": 32,
+      "headDim": 128,
+      "peakTFLOPS": 60,
+      "bandwidthGBs": 900,
+      "bytes": 2
+    },
+    "result": {
+      "verdict": "工作点更接近计算侧；分块、低精度与并行调度会决定峰值能否兑现。",
+      "metrics": [
+        {
+          "id": "intensity",
+          "label": "算术强度",
+          "value": 2048,
+          "unit": "FLOP/B",
+          "detail": "粗略注意力 FLOPs ÷ 估算的 HBM 字节",
+          "tone": "ai"
+        },
+        {
+          "id": "roofline",
+          "label": "Roofline 拐点",
+          "value": 66.67,
+          "unit": "FLOP/B",
+          "detail": "峰值算力 ÷ 峰值带宽",
+          "tone": "embedded"
+        },
+        {
+          "id": "memoryMB",
+          "label": "估算 HBM 往返",
+          "value": 128,
+          "unit": "MiB",
+          "detail": "朴素路径的单次量级估算",
+          "tone": "neutral"
+        }
+      ]
+    }
+  },
+  "reasoning-budget": {
+    "topic": "inference-time-compute",
+    "title": "推理预算与 Best-of-N",
+    "evidence": "独立同分布假设下的概率模型；真实模型的样本相关性会降低收益。",
+    "conclusion": "8 次采样在单次成功率 25% 时可把至少一个正确答案的概率提高到约 90%；如果验证器不可靠，实际成功率会明显低于理论上限。",
+    "inputs": {
+      "attempts": 8,
+      "successRate": 0.25,
+      "verifierAccuracy": 0.9,
+      "costPerAttempt": 1.5
+    },
+    "result": {
+      "verdict": "在当前假设下，推理预算可能比直接扩大模型更划算。",
+      "metrics": [
+        {
+          "id": "bestOfN",
+          "label": "至少一次正确",
+          "value": 0.8999,
+          "unit": "",
+          "detail": "独立同分布下的理论上限",
+          "tone": "ai"
+        },
+        {
+          "id": "verified",
+          "label": "验证后可靠率",
+          "value": 0.8099,
+          "unit": "",
+          "detail": "上限 × 验证器精度",
+          "tone": "embedded"
+        },
+        {
+          "id": "budget",
+          "label": "推理预算",
+          "value": 12,
+          "unit": "cost",
+          "detail": "采样次数 × 单次成本",
+          "tone": "neutral"
+        }
+      ]
+    }
+  },
+  "tool-loop": {
+    "topic": "mcp-trust-boundary",
+    "title": "工具循环故障预算",
+    "evidence": "离散期望模型；用于讨论边界，不替代故障注入和真实沙箱。",
+    "conclusion": "当每步成功率为 95%、需要 8 步时，整条链路按时完成的概率约 66%。重试必须与幂等、预算和截止期一起设计。",
+    "inputs": {
+      "steps": 8,
+      "successRate": 0.95,
+      "retries": 2,
+      "idempotency": 100
+    },
+    "result": {
+      "verdict": "端到端成功率低于工程上常见的可接受范围；增加每步观测和可恢复检查点。",
+      "metrics": [
+        {
+          "id": "chainSuccess",
+          "label": "链路成功率",
+          "value": 0.6634,
+          "unit": "",
+          "detail": "假设各步独立",
+          "tone": "ai"
+        },
+        {
+          "id": "calls",
+          "label": "预期工具调用",
+          "value": 8.8,
+          "unit": "calls",
+          "detail": "包含失败后的重试",
+          "tone": "embedded"
+        },
+        {
+          "id": "duplicateRisk",
+          "label": "重复副作用暴露",
+          "value": 0,
+          "unit": "",
+          "detail": "未幂等写操作 × 重试机会",
+          "tone": "neutral"
+        }
+      ]
+    }
+  },
+  "moe-routing": {
+    "topic": "sparse-moe",
+    "title": "MoE 路由与专家缓存",
+    "evidence": "路由与缓存近似模型；真实吞吐取决于批处理、专家并行和通信拓扑。",
+    "conclusion": "稀疏激活降低每 token 的矩阵乘工作量，但全部专家仍可能需要常驻显存；路由越偏斜，热点专家越容易成为尾延迟来源。",
+    "inputs": {
+      "totalParams": 47,
+      "totalExperts": 8,
+      "activeExperts": 2,
+      "tokens": 4096,
+      "cacheSlots": 6,
+      "skew": 35
+    },
+    "result": {
+      "verdict": "稀疏激活带来的计算收益仍取决于专家放置、批大小与路由分布。",
+      "metrics": [
+        {
+          "id": "activeParams",
+          "label": "等效激活参数",
+          "value": 11.75,
+          "unit": "B",
+          "detail": "总参数 × 激活专家比例",
+          "tone": "ai"
+        },
+        {
+          "id": "resident",
+          "label": "专家常驻比例",
+          "value": 0.75,
+          "unit": "",
+          "detail": "缓存槽 ÷ 专家总数",
+          "tone": "embedded"
+        },
+        {
+          "id": "tail",
+          "label": "尾延迟放大",
+          "value": 1.63,
+          "unit": "×",
+          "detail": "路由越偏斜，热点专家越集中",
+          "tone": "neutral"
+        }
+      ]
+    }
+  },
+  "tinyml-budget": {
+    "topic": "edge-small-models",
+    "title": "TinyML SRAM 与量化预算",
+    "evidence": "静态容量模型；实际可用 SRAM 会受链接脚本、栈和 DMA 缓冲区影响。",
+    "conclusion": "默认 4-bit 权重方案需要约 953 KiB 仅存放 2M 参数，已经超过 512 KiB SRAM；端侧模型必须同时优化权重、激活和 KV。",
+    "inputs": {
+      "params": 2,
+      "bits": 4,
+      "activationKB": 96,
+      "kvKB": 64,
+      "sramKB": 512,
+      "overhead": 20
+    },
+    "result": {
+      "verdict": "当前配置超出 SRAM 约 709.9 KiB；需要更低量化、更小 KV 或外部存储。",
+      "metrics": [
+        {
+          "id": "weightKB",
+          "label": "权重存储",
+          "value": 976.6,
+          "unit": "KiB",
+          "detail": "参数量 × 位宽 ÷ 8",
+          "tone": "ai"
+        },
+        {
+          "id": "totalKB",
+          "label": "总占用",
+          "value": 1136.6,
+          "unit": "KiB",
+          "detail": "权重 + 激活 + KV",
+          "tone": "embedded"
+        },
+        {
+          "id": "fit",
+          "label": "可用 SRAM",
+          "value": 426.7,
+          "unit": "KiB",
+          "detail": "已扣除运行时余量",
+          "tone": "neutral"
+        }
+      ]
+    }
+  },
+  "riscv-roofline": {
+    "topic": "riscv-ai-accelerators",
+    "title": "RISC-V 数据移动模型",
+    "evidence": "Roofline 量级模型；不是特定 RISC-V 板卡的实测。",
+    "conclusion": "当每字节只能提供少量运算时，更多核心不会改善性能；软件基线、数据复用与内存层级必须同步设计。",
+    "inputs": {
+      "peakTFLOPS": 0.5,
+      "bandwidthGBs": 24,
+      "intensity": 12,
+      "utilization": 55,
+      "modelMB": 128
+    },
+    "result": {
+      "verdict": "数据移动是主约束；向量算子与 NPU 需要共享的高复用数据流。",
+      "metrics": [
+        {
+          "id": "roofline",
+          "label": "带宽拐点",
+          "value": 20.83,
+          "unit": "ops/B",
+          "detail": "峰值算力 ÷ 有效带宽",
+          "tone": "ai"
+        },
+        {
+          "id": "computeTime",
+          "label": "计算侧时间",
+          "value": 5.8568,
+          "unit": "ms",
+          "detail": "工作集 × 算术强度 ÷ 有效算力",
+          "tone": "embedded"
+        },
+        {
+          "id": "memoryTime",
+          "label": "内存侧时间",
+          "value": 5.5924,
+          "unit": "ms",
+          "detail": "工作集字节 ÷ 有效带宽",
+          "tone": "neutral"
+        }
+      ]
+    }
+  },
+  "chiplet-budget": {
+    "topic": "chiplet-edge-ai",
+    "title": "Chiplet 带宽、能耗与良率",
+    "evidence": "简化敏感性模型；封装拓扑、SerDes 与热约束需要更细的物理设计数据。",
+    "conclusion": "默认模型显示，带宽和每字节能耗往往比“逻辑面积复用”更早成为边缘 AI Chiplet 的约束。",
+    "inputs": {
+      "tokens": 16,
+      "bytesPerTokenMB": 2,
+      "bandwidthGBs": 256,
+      "energyPJByte": 0.45,
+      "powerW": 8,
+      "defect": 0.18
+    },
+    "result": {
+      "verdict": "在当前假设下互连可接受，但能耗和封装良率仍需纳入总成本。",
+      "metrics": [
+        {
+          "id": "transferMs",
+          "label": "跨 die 传输",
+          "value": 0.131,
+          "unit": "ms",
+          "detail": "批内 token × 每 token 字节 ÷ 带宽",
+          "tone": "ai"
+        },
+        {
+          "id": "energyMJ",
+          "label": "互连能耗",
+          "value": 0.0151,
+          "unit": "mJ",
+          "detail": "字节 × pJ/B",
+          "tone": "embedded"
+        },
+        {
+          "id": "powerMs",
+          "label": "功耗预算时间",
+          "value": 0.002,
+          "unit": "ms",
+          "detail": "互连能耗 ÷ 功耗预算",
+          "tone": "neutral"
+        }
+      ]
+    }
+  },
+  "sparsity-energy": {
+    "topic": "compute-in-memory",
+    "title": "稀疏与事件能耗模型",
+    "evidence": "简化能耗模型；不替代器件级仿真。",
+    "conclusion": "稀疏负载的收益取决于事件生成、索引与同步开销；高稀疏并不自动等于高能效。",
+    "inputs": {
+      "denseOps": 4,
+      "sparsity": 75,
+      "cimEfficiency": 3,
+      "eventOverhead": 18,
+      "powerW": 0.8
+    },
+    "result": {
+      "verdict": "在该模型下，稀疏和 CIM 的组合仍有明显理论收益，需用真实负载验证。",
+      "metrics": [
+        {
+          "id": "effectiveOps",
+          "label": "有效运算",
+          "value": 1,
+          "unit": "GOP",
+          "detail": "稠密运算 × (1 - 稀疏度)",
+          "tone": "ai"
+        },
+        {
+          "id": "throughput",
+          "label": "有效吞吐比",
+          "value": 2.46,
+          "unit": "×",
+          "detail": "CIM 收益 × 事件开销后的相对值",
+          "tone": "embedded"
+        },
+        {
+          "id": "energy",
+          "label": "近似能耗指数",
+          "value": 5.37,
+          "unit": "pJ",
+          "detail": "用于比较配置，不是器件实测",
+          "tone": "neutral"
+        }
+      ]
+    }
+  },
+  "trust-budget": {
+    "topic": "trusted-embedded-stack",
+    "title": "实时安全与 PQC 开销",
+    "evidence": "周期级预算模型；实际结果依赖指令集、加速器、栈和功耗状态。",
+    "conclusion": "PQC 不只是一个算法替换；密钥/签名尺寸、验证延迟和在控制回路中的位置都会改变系统可调度性。",
+    "inputs": {
+      "signCycles": 420000,
+      "verifyCycles": 120000,
+      "clockMHz": 160,
+      "iterations": 2,
+      "keyBytes": 6144,
+      "deadlineMs": 20
+    },
+    "result": {
+      "verdict": "当前预算仍留有截止期余量；还要检查最坏执行时间与功耗状态切换。",
+      "metrics": [
+        {
+          "id": "latency",
+          "label": "密码学延迟",
+          "value": 6.75,
+          "unit": "ms",
+          "detail": "签名 + 验证周期 × 次数 ÷ 时钟",
+          "tone": "embedded"
+        },
+        {
+          "id": "margin",
+          "label": "截止期余量",
+          "value": 13.25,
+          "unit": "ms",
+          "detail": "截止期 - 密码学延迟",
+          "tone": "ai"
+        },
+        {
+          "id": "keyBytes",
+          "label": "密钥/签名流量",
+          "value": 12288,
+          "unit": "B",
+          "detail": "每周期操作 × 密钥与签名大小",
+          "tone": "neutral"
+        }
+      ]
+    }
+  }
+}

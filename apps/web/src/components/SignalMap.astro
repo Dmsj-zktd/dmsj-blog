@@ -1,0 +1,269 @@
+---
+import { frontierScore, frontierTopics } from "@dmsj/content-model/frontier";
+
+interface Props {
+  counts?: Record<string, number>;
+}
+
+const { counts = {} } = Astro.props;
+const reasoning = frontierTopics.filter((topic) => topic.cluster === "reasoning");
+const silicon = frontierTopics.filter((topic) => topic.cluster === "silicon");
+const xPositions = [88, 198, 320, 442, 552];
+const nodes = [
+  ...reasoning.map((topic, index) => ({
+    topic,
+    x: xPositions[index],
+    y: 104,
+    count: counts[topic.id] ?? 0,
+  })),
+  ...silicon.map((topic, index) => ({
+    topic,
+    x: xPositions[index],
+    y: 300,
+    count: counts[topic.id] ?? 0,
+  })),
+];
+---
+
+<figure class="signal-map" aria-labelledby="signal-map-title">
+  <div class="signal-map__head">
+    <h2 id="signal-map-title">前沿雷达</h2>
+    <span>10 条研究线 · 2023–2026</span>
+  </div>
+  <div class="signal-map__stage">
+    <svg viewBox="0 0 640 390" focusable="false">
+      <defs>
+        <linearGradient id="signal-ai" x1="0" x2="1">
+          <stop offset="0" stop-color="var(--ai)" stop-opacity="0.22"></stop>
+          <stop offset="1" stop-color="var(--ai)" stop-opacity="0.92"></stop>
+        </linearGradient>
+        <linearGradient id="signal-embedded" x1="0" x2="1">
+          <stop offset="0" stop-color="var(--embedded)" stop-opacity="0.22"></stop>
+          <stop offset="1" stop-color="var(--embedded)" stop-opacity="0.92"></stop>
+        </linearGradient>
+      </defs>
+      <path class="signal-grid" d="M36 58H604M36 202H604M36 350H604"></path>
+      <path class="signal-trace signal-trace--ai" d="M42 188h56l18-76h33l18 76h41l17-84h38l15 84h54l17-67h39l16 67h58l14-78h42"></path>
+      <path class="signal-trace signal-trace--embedded" d="M42 218h48l20 66h35l19-66h42l18 74h39l15-74h49l21 69h38l17-69h55l18 59h42"></path>
+      <g class="signal-axis">
+        <text x="42" y="392">INFERENCE / REASONING</text>
+        <text x="42" y="230">SILICON / EMBEDDED</text>
+      </g>
+      {
+        nodes.map(({ topic, x, y, count }) => (
+          <g class:list={["signal-node", `signal-node--${topic.cluster}`]}>
+            <title>{`${topic.title}，编辑评分 ${frontierScore(topic.score)}，${count} 篇笔记`}</title>
+            <circle class="signal-node__halo" cx={x} cy={y} r="18"></circle>
+            <circle class="signal-node__dot" cx={x} cy={y} r="6"></circle>
+            <text x={x} y={y + 30} text-anchor="middle">{topic.shortTitle}</text>
+            <text class="signal-node__meta" x={x} y={y + 43} text-anchor="middle">
+              {frontierScore(topic.score)} / {count} 篇
+            </text>
+          </g>
+        ))
+      }
+    </svg>
+  </div>
+  <figcaption>
+    <span><i class="legend-dot legend-dot--ai"></i> 推理与模型系统</span>
+    <span><i class="legend-dot legend-dot--embedded"></i> 芯片与嵌入式</span>
+    <a href="/frontier/">查看评分与局限</a>
+  </figcaption>
+  <ul class="signal-map__index" aria-label="前沿主题索引">
+    {
+      frontierTopics.map((topic) => (
+        <li>
+          <a href={`/frontier/${topic.id}/`}>
+            <span>{topic.shortTitle}</span>
+            <strong>{frontierScore(topic.score)}</strong>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</figure>
+
+<style is:global>
+  .signal-map {
+    position: relative;
+    margin: 0;
+    border: 1px solid var(--line-strong);
+    background: color-mix(in srgb, var(--surface-strong) 76%, transparent);
+    box-shadow: var(--shadow);
+  }
+
+  .signal-map__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-block-end: 1px solid var(--line);
+    padding: 0.72rem 0.9rem;
+  }
+
+  .signal-map__head p,
+  .signal-map__head h2 {
+    margin: 0;
+    font-size: 0.76rem;
+    font-weight: 650;
+  }
+
+  .signal-map__head span {
+    color: var(--ink-faint);
+    font: 500 0.65rem/1.2 var(--font-mono);
+  }
+
+  .signal-map__stage {
+    overflow: hidden;
+  }
+
+  .signal-map svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .signal-grid {
+    fill: none;
+    stroke: var(--line);
+    stroke-dasharray: 2 8;
+    stroke-width: 0.7;
+  }
+
+  .signal-trace {
+    fill: none;
+    stroke-linecap: round;
+    stroke-width: 1.4;
+  }
+
+  .signal-trace--ai {
+    stroke: url("#signal-ai");
+  }
+
+  .signal-trace--embedded {
+    stroke: url("#signal-embedded");
+  }
+
+  .signal-axis {
+    fill: var(--ink-faint);
+    font-family: var(--font-mono);
+    font-size: 8px;
+    letter-spacing: 0.08em;
+  }
+
+  .signal-node text {
+    fill: var(--ink-soft);
+    font-family: var(--font-ui);
+    font-size: 9px;
+    font-weight: 580;
+  }
+
+  .signal-node .signal-node__meta {
+    fill: var(--ink-faint);
+    font-family: var(--font-mono);
+    font-size: 7px;
+  }
+
+  .signal-node__halo {
+    fill: transparent;
+    stroke: currentColor;
+    stroke-dasharray: 2 3;
+    stroke-width: 0.8;
+    opacity: 0.48;
+    transform-box: fill-box;
+    transform-origin: center;
+    transition:
+      opacity 160ms ease,
+      transform 200ms var(--ease-out);
+  }
+
+  .signal-node--reasoning {
+    color: var(--ai);
+  }
+
+  .signal-node--silicon {
+    color: var(--embedded);
+  }
+
+  .signal-node__dot {
+    fill: currentColor;
+  }
+
+  .signal-node:hover .signal-node__halo {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+
+  .signal-map figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem 1rem;
+    align-items: center;
+    border-block-start: 1px solid var(--line);
+    padding: 0.65rem 0.9rem;
+    color: var(--ink-faint);
+    font-size: 0.7rem;
+  }
+
+  .signal-map figcaption a {
+    margin-inline-start: auto;
+    color: var(--ink-soft);
+  }
+
+  .legend-dot {
+    display: inline-block;
+    width: 0.48rem;
+    height: 0.48rem;
+    margin-inline-end: 0.25rem;
+    border-radius: 999px;
+  }
+
+  .legend-dot--ai {
+    background: var(--ai);
+  }
+
+  .legend-dot--embedded {
+    background: var(--embedded);
+  }
+
+  .signal-map__index {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    margin: 0;
+    border-block-start: 1px solid var(--line);
+    padding: 0;
+    list-style: none;
+  }
+
+  .signal-map__index li {
+    border-block-end: 1px solid var(--line);
+  }
+
+  .signal-map__index li:nth-child(odd) {
+    border-inline-end: 1px solid var(--line);
+  }
+
+  .signal-map__index a {
+    display: flex;
+    min-height: 2.8rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.58rem 0.7rem;
+    color: var(--ink-soft);
+    font-size: 0.72rem;
+    text-decoration: none;
+  }
+
+  .signal-map__index strong {
+    color: var(--ai);
+    font: 600 0.68rem/1 var(--font-mono);
+  }
+
+  @media (max-width: 620px) {
+    .signal-map__stage {
+      display: none;
+    }
+  }
+</style>

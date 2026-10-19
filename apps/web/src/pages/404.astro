@@ -1,20 +1,71 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { ui } from "@/i18n/zh-CN";
 ---
 
-<BaseLayout title={ui.notFound.title} noindex>
-  <div class="shell page-wrap notfound">
-    <p class="eyebrow">404</p>
-    <h1>{ui.notFound.title}</h1>
-    <p class="muted">{ui.notFound.description}</p>
-    <a class="btn btn--accent" href="/">{ui.notFound.backHome}</a>
-  </div>
+<BaseLayout title="404 · Signal lost · DMSJ" noindex>
+  <section class="shell not-found">
+    <div class="not-found__code">404</div>
+    <div class="not-found__body">
+      <p class="mono-label">Signal lost / route not found</p>
+      <h1>这条路径没有可解析的信号。</h1>
+      <p>页面可能被移动，或者链接从未存在。回到索引，从问题而不是 URL 出发。</p>
+      <div class="not-found__actions">
+        <a class="btn btn--primary" href="/">回到首页</a>
+        <a class="btn" href="/frontier/">查看前沿研究</a>
+        <a class="btn" href="/archive/">全部笔记</a>
+      </div>
+    </div>
+  </section>
 </BaseLayout>
 
-<style is:global>
-  .notfound {
-    text-align: center;
-    padding-block: 5rem;
+<style>
+  .not-found {
+    display: grid;
+    grid-template-columns: minmax(10rem, 0.5fr) minmax(0, 1.5fr);
+    gap: clamp(2rem, 7vw, 7rem);
+    align-items: center;
+    min-height: 70vh;
+    padding-block: 4rem;
+  }
+
+  .not-found__code {
+    color: transparent;
+    font-size: clamp(7rem, 22vw, 18rem);
+    font-weight: 650;
+    letter-spacing: -0.1em;
+    line-height: 0.75;
+    -webkit-text-stroke: 1px var(--ink);
+  }
+
+  .not-found h1 {
+    max-width: 14ch;
+    margin: 0.5rem 0 1rem;
+    font-size: clamp(2.3rem, 5vw, 4.8rem);
+    font-weight: 620;
+    letter-spacing: -0.06em;
+    line-height: 0.98;
+  }
+
+  .not-found__body > p:last-of-type {
+    max-width: 36rem;
+    color: var(--ink-soft);
+  }
+
+  .not-found__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-block-start: 1.2rem;
+  }
+
+  @media (max-width: 700px) {
+    .not-found {
+      grid-template-columns: 1fr;
+      align-content: center;
+    }
+
+    .not-found__code {
+      font-size: 8rem;
+    }
   }
 </style>

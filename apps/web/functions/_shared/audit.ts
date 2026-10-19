@@ -11,12 +11,14 @@ export async function writeAudit(
     success?: boolean;
     ipHash?: string | null;
     details?: unknown;
+    requestId?: string | null;
   } = {},
 ): Promise<void> {
   const { success = true } = opts;
   await env.DB.prepare(
-    `INSERT INTO audit_logs (ts, actor, action, resource, resource_id, success, ip_hash, details)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO audit_logs
+      (ts, actor, action, resource, resource_id, success, ip_hash, details, request_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       Date.now(),
@@ -27,6 +29,7 @@ export async function writeAudit(
       success ? 1 : 0,
       opts.ipHash ?? null,
       opts.details ? JSON.stringify(opts.details) : null,
+      opts.requestId ?? null,
     )
     .run();
 }

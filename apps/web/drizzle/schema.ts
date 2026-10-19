@@ -61,6 +61,8 @@ export const drafts = sqliteTable("drafts", {
   series: text("series"),
   lang: text("lang").notNull().default("zh-CN"),
   body: text("body").notNull(),
+  metadataJson: text("metadata_json").notNull().default("{}"),
+  version: integer("version").notNull().default(1),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
 });
@@ -75,6 +77,7 @@ export const auditLogs = sqliteTable("audit_logs", {
   success: integer("success", { mode: "boolean" }).notNull().default(true),
   ipHash: text("ip_hash"),
   details: text("details"),
+  requestId: text("request_id"),
 });
 
 export type PageViewEvent = typeof pageViewEvents.$inferSelect;

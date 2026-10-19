@@ -1,0 +1,223 @@
+---
+---
+
+<button
+  class="search-trigger"
+  type="button"
+  aria-haspopup="dialog"
+  aria-expanded="false"
+  aria-label="搜索全站，快捷键 Ctrl 或 Command 加 K"
+  data-open-search
+>
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="11" cy="11" r="6.5"></circle>
+    <path d="m16 16 4.4 4.4"></path>
+  </svg>
+  <span>搜索</span>
+  <kbd data-search-shortcut>⌘ K</kbd>
+</button>
+
+<dialog class="search-dialog" data-search-dialog aria-labelledby="search-dialog-title">
+  <div class="search-dialog__panel">
+    <div class="search-dialog__top">
+      <div>
+        <p class="search-dialog__kicker">全站检索</p>
+        <h2 id="search-dialog-title">从一个概念找到整条证据链</h2>
+      </div>
+      <button class="icon-button search-dialog__close" type="button" data-close-search>
+        <span aria-hidden="true">×</span>
+        <span class="visually-hidden">关闭搜索</span>
+      </button>
+    </div>
+
+    <form class="search-dialog__form" role="search" data-search-form>
+      <label class="visually-hidden" for="dialog-search-input">搜索文章、实验与前沿主题</label>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="11" cy="11" r="6.5"></circle>
+        <path d="m16 16 4.4 4.4"></path>
+      </svg>
+      <input
+        id="dialog-search-input"
+        type="search"
+        name="q"
+        autocomplete="off"
+        spellcheck="false"
+        enterkeyhint="search"
+        placeholder="搜索 KV Cache、Chiplet、Agent…"
+        data-search-input
+      />
+      <kbd aria-hidden="true">Esc</kbd>
+    </form>
+
+    <p class="search-dialog__status" role="status" data-search-status>
+      输入关键词，检索文章、实验与前沿主题。
+    </p>
+    <ol class="search-results" data-search-results></ol>
+
+    <div class="search-dialog__foot">
+      <span>按 <kbd>Enter</kbd> 立即检索</span>
+      <a href="/search/">打开完整搜索页</a>
+    </div>
+  </div>
+</dialog>
+
+<style is:global>
+  .search-dialog {
+    width: min(46rem, calc(100% - 1.5rem));
+    max-height: min(80vh, 46rem);
+    margin: auto;
+    border: 1px solid var(--line-strong);
+    background: var(--surface-strong);
+    color: var(--ink);
+    padding: 0;
+    box-shadow: 0 30px 100px rgba(0, 0, 0, 0.24);
+    overflow: auto;
+  }
+
+  .search-dialog::backdrop {
+    background: rgba(7, 10, 15, 0.62);
+    backdrop-filter: blur(5px);
+  }
+
+  .search-dialog.is-fallback-open {
+    position: fixed;
+    z-index: 160;
+    inset: 8vh 0 auto;
+  }
+
+  .search-dialog__panel {
+    padding: clamp(1.15rem, 3vw, 2rem);
+  }
+
+  .search-dialog__top {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .search-dialog__kicker {
+    margin: 0 0 0.35rem;
+    color: var(--ai);
+    font: 600 0.75rem/1.2 var(--font-mono);
+  }
+
+  .search-dialog h2 {
+    max-width: 22ch;
+    margin: 0;
+    font-size: clamp(1.45rem, 4vw, 2.2rem);
+    font-weight: 650;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+  }
+
+  .search-dialog__close {
+    flex: 0 0 auto;
+    font-size: 1.35rem;
+  }
+
+  .search-dialog__form {
+    display: grid;
+    grid-template-columns: 1.2rem minmax(0, 1fr) auto;
+    gap: 0.7rem;
+    align-items: center;
+    margin-block-start: 1.4rem;
+    border: 1px solid var(--line-strong);
+    background: var(--paper);
+    padding: 0.65rem 0.8rem;
+  }
+
+  .search-dialog__form svg {
+    width: 1.2rem;
+    fill: none;
+    stroke: var(--ink-faint);
+    stroke-width: 1.6;
+  }
+
+  .search-dialog__form input {
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--ink);
+    font-size: 1.02rem;
+  }
+
+  .search-dialog__form kbd,
+  .search-dialog__foot kbd {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    padding: 0.12rem 0.35rem;
+    color: var(--ink-soft);
+    font: 500 0.68rem/1.2 var(--font-mono);
+  }
+
+  .search-dialog__status {
+    margin: 0.85rem 0 0;
+    color: var(--ink-faint);
+    font-size: 0.82rem;
+  }
+
+  .search-results {
+    display: grid;
+    gap: 0;
+    margin: 0.5rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .search-result {
+    border-block-start: 1px solid var(--line);
+    padding-block: 0.8rem;
+  }
+
+  .search-result a {
+    color: var(--ink);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .search-result a:hover {
+    color: var(--ai);
+  }
+
+  .search-result p {
+    margin: 0.25rem 0 0;
+    color: var(--ink-soft);
+    font-size: 0.84rem;
+    line-height: 1.55;
+  }
+
+  .search-result mark {
+    background: var(--ai-soft);
+    color: var(--ink);
+    padding-inline: 0.08em;
+  }
+
+  .search-dialog__foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-block-start: 1rem;
+    border-block-start: 1px solid var(--line);
+    padding-block-start: 0.8rem;
+    color: var(--ink-faint);
+    font-size: 0.76rem;
+  }
+
+  .search-dialog__foot a {
+    color: var(--ink-soft);
+  }
+
+  @media (max-width: 38rem) {
+    .search-dialog {
+      width: calc(100% - 1rem);
+      max-height: 88vh;
+    }
+
+    .search-dialog__foot {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+</style>

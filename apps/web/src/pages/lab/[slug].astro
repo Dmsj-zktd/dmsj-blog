@@ -1,0 +1,123 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import LabExplorer from "@/components/LabExplorer.astro";
+import { labDefinitions } from "@/lib/labs";
+import { getFrontierTopic } from "@dmsj/content-model";
+
+export function getStaticPaths() {
+  return labDefinitions.map((lab) => ({
+    params: { slug: lab.slug },
+    props: { lab },
+  }));
+}
+
+const { lab } = Astro.props;
+const topic = getFrontierTopic(lab.topic);
+---
+
+<BaseLayout
+  title={`${lab.shortTitle} · 实验台 · DMSJ`}
+  description={lab.description}
+  keywords={["simulation", lab.topic, "systems engineering"]}
+>
+  <div class="shell">
+    <nav class="breadcrumbs" aria-label="面包屑">
+      <a href="/">DMSJ</a>
+      <span aria-hidden="true">/</span>
+      <a href="/lab/">实验台</a>
+      <span aria-hidden="true">/</span>
+      <span>{lab.shortTitle}</span>
+    </nav>
+  </div>
+
+  <header class="shell page-hero lab-hero">
+    <p class="mono-label">Instrument / {lab.slug}</p>
+    <h1>{lab.question}</h1>
+    <p class="page-hero__lead">{lab.staticConclusion}</p>
+    {topic && <a class="text-link" href={`/frontier/${topic.id}/`}>回到 {topic.shortTitle} 研究档案</a>}
+  </header>
+
+  <div class="shell section">
+    <LabExplorer lab={lab} />
+  </div>
+
+  <section class="shell section lab-sources">
+    <div class="section-heading">
+      <div>
+        <p class="mono-label">Primary reading</p>
+        <h2>先读原始来源，再相信模型</h2>
+      </div>
+    </div>
+    <div class="lab-sources__list">
+      {
+        lab.sources.map((source) => (
+          <a href={source.url} rel="noreferrer">
+            <span>{source.publisher}{source.year ? ` / ${source.year}` : ""}</span>
+            <strong>{source.title}</strong>
+            <small>↗</small>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    padding-block: 1.2rem;
+    color: var(--ink-faint);
+    font: 0.68rem var(--font-mono);
+  }
+
+  .breadcrumbs a {
+    color: var(--ink-soft);
+    text-decoration: none;
+  }
+
+  .lab-hero .text-link {
+    margin-block-start: 1rem;
+  }
+
+  .lab-sources {
+    border-block-start: 1px solid var(--line);
+  }
+
+  .lab-sources__list {
+    border-block-start: 1px solid var(--line);
+  }
+
+  .lab-sources__list a {
+    display: grid;
+    grid-template-columns: 10rem minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    border-block-end: 1px solid var(--line);
+    color: var(--ink);
+    padding: 0.8rem 0;
+    text-decoration: none;
+  }
+
+  .lab-sources__list span,
+  .lab-sources__list small {
+    color: var(--ink-faint);
+    font: 0.64rem var(--font-mono);
+  }
+
+  .lab-sources__list strong {
+    font-size: 0.84rem;
+    font-weight: 560;
+  }
+
+  @media (max-width: 620px) {
+    .lab-sources__list a {
+      grid-template-columns: 1fr auto;
+    }
+
+    .lab-sources__list span {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

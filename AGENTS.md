@@ -5,7 +5,9 @@
 ## 1. 项目事实源（不许凭记忆，必须看代码/命令输出）
 
 - 内容事实源：`apps/web/content/` 下 Markdown/MDX 文件；`apps/web/src/site/content-registry.ts` 是内容域注册表。
-- 站点/主题/评论等静态配置：`apps/web/src/config/site.ts` 与 `apps/web/src/site/themes.ts`。
+- 站点/外观/评论等静态配置：`apps/web/src/config/site.ts` 与 `apps/web/src/site/themes.ts`。
+- 共享内容模型、前沿注册表与 API 输入 schema：`packages/content-model/`。
+- 可重跑实验模型：`apps/web/src/lib/labs.ts`；快照由 `pnpm labs` 生成。
 - 数据库 schema：`apps/web/drizzle/schema.ts` + `apps/web/drizzle/*.sql`；动态状态（访客、草稿、审计）存 D1，会话/限流存 KV。
 - API 全部位于 `apps/web/functions/api/[[route]].ts`（Cloudflare Pages Functions + Hono）。
 - 管理后台 SPA：`apps/admin/`（Vue 3 + Vite，构建产物进入 `apps/web/public/admin/`，随 Astro 一并发布）。
@@ -30,7 +32,7 @@
 - 提交前按风险完成安全复核：输入 Zod 校验、SQL 全绑定、输出转义/XSS、CSP 与安全头、审计留痕。
 - 影响性能/首屏/包体的改动，记录并对比构建产物与关键路径；禁止为了动效牺牲 LCP/CLS。
 - 所有通过管理后台/API 的变更（登录、文章、配置等）都必须写 `audit_logs`：记录谁、何时、资源、结果、上下文，禁止静默改库。
-- 阶段收尾跑一次完整回归：`pnpm lint` → `pnpm check` → `pnpm test` → `pnpm build` → `pnpm test:e2e`；E2E 在无法运行浏览器时写明原因并保留配置。
+- 阶段收尾跑一次完整回归：`pnpm lint` → `pnpm check` → `pnpm test` → `pnpm labs` → `pnpm build` → `pnpm test:e2e` → `pnpm test:a11y` → `pnpm test:visual`；Firefox 等本机运行库不可用时写明原因，以 CI 三浏览器结果为准。
 
 ## 3. 自主运行规则（用户不在场）
 
@@ -50,7 +52,9 @@
 - Git-first：已发布文章永远以仓库文件为准；D1 只存草稿/统计/审计等动态数据，不得把已发布正文当作唯一存储。
 - 草稿绝不提交到公开仓库：`draft:true` 的文件不得进入构建输出；管理后台未发布草稿只存 D1。
 - 新增内容域 = `content/<domain>/` + 注册表加一条记录，路由/导航/sitemap/RSS/搜索自动派生。
-- 主题只能通过 token 变量换肤：组件/页面不得写死主题色；主题列表与默认策略只由 themes 配置控制。
+- 公开站只有一个 Signal Lab 品牌：组件/页面不得写死主题色；浅色、深色、跟随系统与高对比必须由 token 驱动。禁止恢复随机五主题、鼠标光晕或常驻粒子。
+- 实验只能引用 `lib/labs.ts` 注册的 slug；内容 frontmatter 不能执行任意脚本。所有模拟结果必须与实测分开标注。
+- 每个前沿主题必须保留旗舰文与实验文，来源、成熟度、证据等级、核验日期与限制可追溯；`pnpm test` 会检查路径与来源数量。
 - 所有外部请求参数先 Zod 校验；所有 SQL 参数化；所有写操作审计；Secrets 只进 `.dev.vars`/Cloudflare Secrets，绝不入库。
 - `robots.txt`、API 鉴权、CSP 等安全基线不能因“页面简单”而删除。
 - 公共页面保持纯静态 SSG；动态能力全部走 `/api/*`，避免把数据库读入构建产物。
@@ -64,6 +68,7 @@ pnpm dev:admin              # 本地 Vue admin dev server
 pnpm check                  # 类型检查 + lint（根脚本聚合）
 pnpm test                   # 单元/集成测试
 pnpm build                  # admin 构建 -> Astro 构建 -> Pagefind 中文索引
+pnpm labs                   # 重生成实验默认结果快照
 pnpm preview                # 本地预览（apps/web）
 ```
 

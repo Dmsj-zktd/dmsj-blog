@@ -1,8 +1,11 @@
 ---
 import "@/styles/global.css";
-import { site } from "@/config/site";
-import Header from "@/components/Header.astro";
 import Footer from "@/components/Footer.astro";
+import Header from "@/components/Header.astro";
+import { site } from "@/config/site";
+import { serializeJsonLd } from "@/lib/structured-data";
+import themeInitSource from "../../public/scripts/theme-init.js?raw";
+import instrumentSansUrl from "@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2?url";
 
 interface Props {
   title?: string;
@@ -10,6 +13,10 @@ interface Props {
   noindex?: boolean;
   image?: string;
   bodyClass?: string;
+  keywords?: string[];
+  type?: "website" | "article";
+  publishedTime?: Date;
+  modifiedTime?: Date;
 }
 
 const {
@@ -17,47 +24,89 @@ const {
   description = site.description,
   noindex = false,
   image,
-  bodyClass,
+  bodyClass = "",
+  keywords = [],
+  type = "website",
+  publishedTime,
+  modifiedTime,
 } = Astro.props;
 
+const fullTitle = title.includes(site.shortName) ? title : `${title} · ${site.shortName}`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const ogImage = image ? new URL(image, Astro.site).href : undefined;
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": type === "article" ? "TechArticle" : "WebSite",
+  name: fullTitle,
+  headline: title,
+  description,
+  url: canonical.href,
+  inLanguage: site.locale,
+  author: {
+    "@type": "Person",
+    name: site.author.name,
+    url: site.author.social.find((item) => item.id === "github")?.url,
+  },
+  ...(publishedTime ? { datePublished: publishedTime.toISOString() } : {}),
+  ...(modifiedTime ? { dateModified: modifiedTime.toISOString() } : {}),
+};
 ---
 
 <!doctype html>
-<html lang={site.locale} data-theme="paper" data-mode="light">
+<html
+  lang={site.locale}
+  data-theme="auto"
+  data-contrast="normal"
+  data-lens="builder"
+>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="generator" content={Astro.generator} />
-    <title>{title}</title>
+    <title>{fullTitle}</title>
     <meta name="description" content={description} />
+    {keywords.length > 0 && <meta name="keywords" content={keywords.join(", ")} />}
     {noindex && <meta name="robots" content="noindex, nofollow" />}
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="alternate" type="application/rss+xml" title={site.name} href="/rss.xml" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content={title} />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f1f4f3" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta property="og:type" content={type} />
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content="zh_CN" />
     {ogImage && <meta property="og:image" content={ogImage} />}
-    <meta name="twitter:card" content="summary" />
-    <meta name="color-scheme" content="light dark" />
-    <script is:inline src="/scripts/theme-init.js"></script>
-    <script is:inline src="/scripts/effect-init.js"></script>
+    <meta name="twitter:card" content={ogImage ? "summary_large_image" : "summary"} />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    {ogImage && <meta name="twitter:image" content={ogImage} />}
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href={instrumentSansUrl}
+      crossorigin="anonymous"
+      fetchpriority="high"
+    />
+    <script is:inline set:html={themeInitSource} />
+    <script is:inline type="application/ld+json" set:html={serializeJsonLd(structuredData)} />
+    <slot name="head" />
   </head>
   <body class={bodyClass}>
     <a class="skip-link" href="#main">{site.shortName} 跳到正文</a>
-    <canvas class="ambient-canvas" aria-hidden="true"></canvas>
-    <div class="cursor-glow" aria-hidden="true"></div>
     <Header />
-    <main id="main" data-pagefind-body>
+    <main id="main" tabindex="-1">
       <slot />
     </main>
     <Footer />
     <script is:inline src="/scripts/theme.js" defer></script>
+    <script is:inline src="/scripts/lens.js" defer></script>
+    <script is:inline src="/scripts/async-css.js" defer></script>
+    <script is:inline src="/scripts/search.js" defer></script>
     <script is:inline src="/scripts/analytics.js" defer></script>
-    <script is:inline src="/scripts/effects.js" defer></script>
-    <script is:inline src="/scripts/tagline.js" defer></script>
   </body>
 </html>

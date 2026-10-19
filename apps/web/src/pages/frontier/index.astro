@@ -1,0 +1,380 @@
+---
+import {
+  FRONTIER_WEIGHTS,
+  frontierScore,
+  frontierTopics,
+} from "@dmsj/content-model/frontier";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { getPublishedPosts } from "@/lib/posts";
+
+const posts = await getPublishedPosts();
+const counts = Object.fromEntries(
+  frontierTopics.map((topic) => [
+    topic.id,
+    posts.filter((post) => post.topic === topic.id).length,
+  ]),
+);
+const maturityLabels: Record<string, string> = {
+  emerging: "演化",
+  established: "已建立",
+  experimental: "实验性",
+};
+const sorted = [...frontierTopics].sort(
+  (a, b) => frontierScore(b.score) - frontierScore(a.score),
+);
+const totalSources = new Set(
+  frontierTopics.flatMap((topic) => topic.sources.map((source) => source.url)),
+).size;
+---
+
+<BaseLayout
+  title="前沿雷达"
+  description="以新颖度、实用性、证据强度、工程价值和边缘相关性评分的十项 AI 与嵌入式研究主题。"
+>
+  <header class="frontier-hero shell">
+    <div>
+      <p class="section-label">Frontier radar / 2023–2026</p>
+      <h1>十项研究，<br />一张可质询的地图。</h1>
+      <p>
+        选题以工程可用性为先，不追逐单日热度。评分用于组织阅读优先级，
+        不是对论文或团队的学术结论；每项权重、来源与局限都公开。
+      </p>
+    </div>
+    <dl class="radar-facts">
+      <div><dt>{frontierTopics.length}</dt><dd>研究主题</dd></div>
+      <div><dt>{totalSources}</dt><dd>核心来源</dd></div>
+      <div><dt>{posts.filter((post) => post.kind === "flagship").length}</dt><dd>旗舰长文</dd></div>
+      <div><dt>{posts.filter((post) => post.lab).length}</dt><dd>解释实验</dd></div>
+    </dl>
+  </header>
+
+  <section class="shell radar-body">
+    <aside class="radar-method">
+      <p class="section-label">评分方法</p>
+      <h2>五项权重，公开可复算</h2>
+      <ol>
+        {
+          Object.entries(FRONTIER_WEIGHTS).map(([key, weight]) => (
+            <li>
+              <span>{{ novelty: "新颖度", usefulness: "实用性", evidence: "证据与采用", engineering: "工程价值", edgeRelevance: "边缘相关" }[key]}</span>
+              <strong>{Math.round(weight * 100)}%</strong>
+            </li>
+          ))
+        }
+      </ol>
+      <p>
+        评审时间：2026-10。动态话题会随论文复现、产业化证据和新失败案例重新评分。
+      </p>
+      <a class="text-link" href="/lab/">查看十个解释实验</a>
+    </aside>
+
+    <div class="radar-table-wrap">
+      <div class="radar-table-head">
+        <span>排序 / 主题</span>
+        <span>研究线</span>
+        <span>阶段</span>
+        <span>笔记</span>
+        <span>综合分</span>
+      </div>
+      <ol class="radar-table">
+        {
+          sorted.map((topic, index) => (
+            <li>
+              <a class="radar-row" href={`/frontier/${topic.id}/`}>
+                <span class="radar-rank">{String(index + 1).padStart(2, "0")}</span>
+                <span class="radar-title">
+                  <strong>{topic.title}</strong>
+                  <small>{topic.summary}</small>
+                </span>
+                <span class:list={["radar-cluster", `radar-cluster--${topic.cluster}`]}>
+                  {topic.cluster === "reasoning" ? "推理系统" : "硅与边缘"}
+                </span>
+                <span>{maturityLabels[topic.maturity]}</span>
+                <span>{counts[topic.id] ?? 0}</span>
+                <span class="radar-score">{frontierScore(topic.score)}</span>
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section class="shell frontier-note">
+    <p>
+      分数是研究阅读的导航，不是排名背书。笔记中的性能数字只在其基线与适用范围内成立；
+      模拟结果会明确标记为模拟，不写成硬件实测。
+    </p>
+    <a class="btn" href="/archive/">按更新时间阅读</a>
+  </section>
+</BaseLayout>
+
+<style is:global>
+  .frontier-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(18rem, 0.7fr);
+    gap: clamp(2rem, 7vw, 7rem);
+    align-items: end;
+    padding-block: clamp(3rem, 8vw, 7rem) clamp(2rem, 5vw, 4rem);
+    border-block-end: 1px solid var(--line);
+  }
+
+  .frontier-hero h1 {
+    max-width: 10em;
+    margin: 0.75rem 0 0;
+    font-size: clamp(3rem, 6vw, 6.4rem);
+    font-weight: 600;
+    letter-spacing: -0.07em;
+    line-height: 1.02;
+    text-wrap: balance;
+  }
+
+  .frontier-hero > div > p:last-child {
+    max-width: 55rem;
+    margin: 1.4rem 0 0;
+    color: var(--ink-soft);
+    font-family: var(--font-reading);
+    font-size: clamp(1rem, 0.95rem + 0.3vw, 1.18rem);
+    line-height: 1.75;
+  }
+
+  .radar-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .radar-facts div {
+    border-block-end: 1px solid var(--line);
+    padding: 1rem;
+  }
+
+  .radar-facts div:nth-child(odd) {
+    border-inline-end: 1px solid var(--line);
+  }
+
+  .radar-facts div:nth-last-child(-n + 2) {
+    border-block-end: 0;
+  }
+
+  .radar-facts dt {
+    font: 620 2rem/1 var(--font-mono);
+  }
+
+  .radar-facts dd {
+    margin: 0.35rem 0 0;
+    color: var(--ink-faint);
+    font-size: 0.7rem;
+  }
+
+  .radar-body {
+    display: grid;
+    grid-template-columns: minmax(14rem, 0.55fr) minmax(0, 1.45fr);
+    gap: clamp(2rem, 6vw, 6rem);
+    padding-block: clamp(2.5rem, 6vw, 5rem);
+  }
+
+  .radar-method {
+    align-self: start;
+    border-block-start: 2px solid var(--ai);
+    padding-block-start: 0.85rem;
+  }
+
+  .radar-method h2 {
+    max-width: 12ch;
+    margin: 0.3rem 0 1rem;
+    font-size: clamp(1.45rem, 2.5vw, 2.1rem);
+    font-weight: 620;
+    letter-spacing: -0.04em;
+    line-height: 1.08;
+  }
+
+  .radar-method ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .radar-method li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    border-block-end: 1px solid var(--line);
+    padding-block: 0.55rem;
+    color: var(--ink-soft);
+    font-size: 0.78rem;
+  }
+
+  .radar-method li strong {
+    color: var(--ai);
+    font-family: var(--font-mono);
+  }
+
+  .radar-method > p:nth-of-type(2) {
+    margin: 1rem 0;
+    color: var(--ink-faint);
+    font-size: 0.7rem;
+    line-height: 1.65;
+  }
+
+  .radar-table-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 7rem 4rem 3rem 4rem;
+    gap: 0.75rem;
+    border-block-end: 2px solid var(--ink);
+    padding: 0.55rem 0.7rem;
+    color: var(--ink-faint);
+    font: 500 0.63rem/1.4 var(--font-mono);
+  }
+
+  .radar-table-head span:first-child {
+    grid-column: 1;
+  }
+
+  .radar-table {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .radar-row {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr) 7rem 4rem 3rem 4rem;
+    gap: 0.75rem;
+    align-items: start;
+    border-block-end: 1px solid var(--line);
+    padding: 0.85rem 0.7rem;
+    color: var(--ink-soft);
+    text-decoration: none;
+    transition: background-color 140ms ease;
+  }
+
+  .radar-row:hover {
+    background: var(--surface);
+    text-decoration: none;
+  }
+
+  .radar-rank {
+    color: var(--ink-faint);
+    font: 500 0.66rem/1.5 var(--font-mono);
+  }
+
+  .radar-title {
+    display: grid;
+    gap: 0.22rem;
+  }
+
+  .radar-title strong {
+    color: var(--ink);
+    font-size: 0.98rem;
+    font-weight: 610;
+    line-height: 1.3;
+  }
+
+  .radar-title small {
+    max-width: 54ch;
+    color: var(--ink-faint);
+    font-size: 0.71rem;
+    line-height: 1.55;
+  }
+
+  .radar-cluster {
+    width: fit-content;
+    border: 1px solid var(--line);
+    padding: 0.1rem 0.4rem;
+    font-size: 0.64rem;
+  }
+
+  .radar-cluster--reasoning {
+    color: var(--ai);
+  }
+
+  .radar-cluster--silicon {
+    color: var(--embedded);
+  }
+
+  .radar-score {
+    color: var(--ink);
+    font: 620 1rem/1.2 var(--font-mono);
+    text-align: end;
+  }
+
+  .frontier-note {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    border-block: 1px solid var(--line);
+    padding-block: 1.4rem;
+  }
+
+  .frontier-note p {
+    max-width: 55rem;
+    margin: 0;
+    color: var(--ink-soft);
+    font-family: var(--font-reading);
+    font-size: 0.9rem;
+    line-height: 1.65;
+  }
+
+  @media (max-width: 980px) {
+    .frontier-hero,
+    .radar-body {
+      grid-template-columns: 1fr;
+    }
+
+    .radar-method {
+      max-width: 36rem;
+    }
+  }
+
+  @media (max-width: 740px) {
+    .frontier-hero h1 {
+      max-width: 10em;
+      font-size: clamp(2.4rem, 9.5vw, 4.4rem);
+      line-height: 1.04;
+    }
+
+    .radar-table-head {
+      display: none;
+    }
+
+    .radar-row {
+      grid-template-columns: 1.7rem minmax(0, 1fr) auto;
+      gap: 0.4rem 0.6rem;
+    }
+
+    .radar-row > span:nth-child(3),
+    .radar-row > span:nth-child(4),
+    .radar-row > span:nth-child(5) {
+      grid-row: 2;
+      font-size: 0.64rem;
+    }
+
+    .radar-row > span:nth-child(3) {
+      grid-column: 2;
+    }
+
+    .radar-row > span:nth-child(4) {
+      grid-column: 2;
+      padding-inline-start: 5.5rem;
+    }
+
+    .radar-row > span:nth-child(5) {
+      grid-column: 2;
+      padding-inline-start: 10rem;
+    }
+
+    .radar-score {
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    .frontier-note {
+      align-items: start;
+      flex-direction: column;
+    }
+  }
+</style>

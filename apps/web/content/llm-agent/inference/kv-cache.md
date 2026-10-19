@@ -5,6 +5,29 @@ date: 2026-09-02
 tags: ["LLM", "推理优化", "Transformer"]
 lang: "zh-CN"
 draft: false
+series: "Signal Lab · 推理基础"
+kind: "note"
+maturity: "established"
+verifiedAt: 2026-10-18
+question: "KV Cache 保存了什么，为什么现代模型还需要 GQA 和分页管理？"
+conclusion: "KV Cache 用显存保存历史 K/V，避免每步重算；缓存大小由层数、KV heads、头维度、上下文和精度共同决定。"
+takeaways:
+  - "生成阶段只需计算当前 token 的 Q，并复用历史 K/V。"
+  - "缓存公式必须使用 KV heads，而不是注意力头总数。"
+  - "GQA 与分页分别降低字节数和分配浪费，解决的是不同问题。"
+evidence:
+  level: "analyzed"
+  scope: "公式推导与公开模型机制分析，不包含特定硬件实测。"
+sources:
+  - title: "Efficient Memory Management for Large Language Model Serving with PagedAttention"
+    url: "https://arxiv.org/abs/2309.06180"
+    authors: "Kwon et al."
+    year: 2023
+    kind: "paper"
+lab: "kv-budget"
+related:
+  - "llm-agent/frontier/paged-kv-cache"
+  - "llm-agent/frontier/kv-cache-budget"
 ---
 
 解码阶段逐 token 生成，但每个 token 都要“重新看一遍历史”吗？KV Cache 的答案：历史 token 的 Key/Value 计算结果不需要重算。
@@ -31,13 +54,15 @@ $$
 
 ## 显存权衡
 
-缓存需要显存。近似公式：
+缓存需要显存。每个 token 的缓存字节数可以写成：
 
 $$
-\text{KV bytes per token} \approx 2 \times \text{layers} \times 2 \times d_{model} \times \text{bytes}
+\text{KV bytes per token} = 2 \times L \times H_{\text{kv}} \times d_{\text{head}} \times b
 $$
 
-所以 7B 模型在长上下文下，KV Cache 可能比权重更占显存。这也是 GQA（Grouped-Query Attention）与 sliding window 被提出的直接原因：**把“K/V 副本”砍掉或裁剪，以少量质量损失换长上下文成本下降**。
+其中 $L$ 是层数，$H_{\text{kv}}$ 是 KV heads 数量，$d_{\text{head}}$ 是头维度，$b$ 是每个元素的字节数。这里不能用 $d_{model}$ 或注意力头总数替代 KV heads。GQA/MQA 会减少 $H_{\text{kv}}$，从而直接降低每个 token 的缓存。
+
+所以 7B 模型在长上下文、高并发下，KV Cache 可能比权重更占显存。GQA 降低缓存字节数；PagedAttention 降低分配碎片并支持共享；sliding window 则裁剪可见历史。三者解决的是不同层面的问题，不能互相替代。
 
 ## 面试可用的一句话
 

@@ -1,0 +1,13 @@
+{
+  "name": "@dmsj/content-model",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./frontier": "./src/frontier.ts"
+  },
+  "dependencies": {
+    "zod": "^4.5.4"
+  }
+}

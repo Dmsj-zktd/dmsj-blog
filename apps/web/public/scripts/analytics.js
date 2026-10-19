@@ -2,10 +2,18 @@
   "use strict";
   var endpoint = "/api/track";
   if (
+    location.hostname === "localhost" ||
+    location.hostname === "127.0.0.1" ||
+    location.protocol === "file:"
+  ) {
+    return;
+  }
+  if (
     !window.fetch ||
     !navigator.sendBeacon ||
     navigator.doNotTrack === "1" ||
-    navigator.globalPrivacyControl
+    navigator.globalPrivacyControl ||
+    navigator.connection?.saveData
   ) {
     return;
   }
@@ -16,9 +24,6 @@
   var data = new URLSearchParams({
     path: location.pathname + location.search,
     referrer: document.referrer || "",
-    title: document.title || "",
-    vw: String(window.innerWidth || 0),
-    lang: navigator.language || "",
   });
   function send() {
     try {

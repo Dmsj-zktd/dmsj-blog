@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseClient } from "../functions/_shared/analytics";
+import { parseCookies } from "../functions/_shared/cookies";
 import { csvCell, toCsv } from "../functions/_shared/csv";
 
 describe("CSV 安全导出", () => {
@@ -8,6 +9,8 @@ describe("CSV 安全导出", () => {
     expect(csvCell("+1")).toBe("'+1");
     expect(csvCell("-1")).toBe("'-1");
     expect(csvCell("@SUM(A1)")).toBe("'@SUM(A1)");
+    expect(csvCell("\t=cmd()")).toBe("'\t=cmd()");
+    expect(csvCell("   +1")).toBe("'   +1");
   });
 
   it("包含逗号/引号/换行时正确转义", () => {
@@ -49,5 +52,14 @@ describe("UA 解析（隐私友好的本地实现）", () => {
       os: "unknown",
       device: "desktop",
     });
+  });
+});
+
+describe("Cookie 解析", () => {
+  it("畸形百分号编码不会让请求抛出 500", () => {
+    const request = new Request("https://example.com/", {
+      headers: { cookie: "dmsj_sid=%E0%A4%A; safe=ok" },
+    });
+    expect(parseCookies(request)).toEqual({ safe: "ok" });
   });
 });

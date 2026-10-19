@@ -1,65 +1,106 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import ArticleCard from "@/components/ArticleCard.astro";
-import { ui } from "@/i18n/zh-CN";
 import { getPublishedPosts } from "@/lib/posts";
 
 const posts = await getPublishedPosts();
-const years = [...new Set(posts.map((p) => p.date.getFullYear()))].sort((a, b) => b - a);
+const years = [...new Set(posts.map((post) => post.date.getFullYear()))].sort((a, b) => b - a);
+const yearsCount = years.length;
 ---
 
-<BaseLayout title={`${ui.archive.title} · ${new Date().getFullYear()}`}>
-  <div class="shell page-wrap">
-    <h1>{ui.archive.title}</h1>
-    <p class="muted">{ui.archive.total.replace("{total}", String(posts.length))}</p>
-    <div class="archive-list">
-      {years.map((year) => (
-        <section class="year-block">
-          <h2 id={`year-${year}`}>{year}</h2>
-          <div class="year-posts">
-            {posts
-              .filter((p) => p.date.getFullYear() === year)
-              .map((post) => <ArticleCard post={post} showExcerpt={false} />)}
-          </div>
-        </section>
-      ))}
+<BaseLayout title="全部笔记 · DMSJ Signal Lab" description="按时间浏览 DMSJ 的 AI 系统、嵌入式工程与研究笔记。">
+  <header class="shell page-hero archive-hero">
+    <p class="mono-label">Library / chronological index</p>
+    <h1>全部笔记，按证据与修订时间展开。</h1>
+    <p class="page-hero__lead">
+      当前公开 {posts.length} 篇，跨越 {yearsCount} 个年份。每一行都保留内容域、文章类型、阅读时间与证据等级。
+    </p>
+    <div class="archive-hero__meta">
+      <span>{posts.length} PUBLIC NOTES</span>
+      <span>{posts.filter((post) => post.kind === "lab").length} LAB RECORDS</span>
+      <span>{posts.filter((post) => post.kind === "synthesis").length} SYNTHESIS</span>
+      <a href="/search/">搜索全站 ↗</a>
     </div>
+  </header>
+
+  <div class="shell section">
+    {years.map((year) => (
+      <section class="archive-year" aria-labelledby={`year-${year}`}>
+        <div class="archive-year__head">
+          <h2 id={`year-${year}`}>{year}</h2>
+          <span>{posts.filter((post) => post.date.getFullYear() === year).length} notes</span>
+        </div>
+        <div class="archive-year__list">
+          {
+            posts
+              .filter((post) => post.date.getFullYear() === year)
+              .map((post, index) => <ArticleCard post={post} index={index} />)
+          }
+        </div>
+      </section>
+    ))}
   </div>
 </BaseLayout>
 
-<style is:global>
-  .page-wrap {
-    max-width: 56rem;
-    padding-block: 2.5rem 1rem;
+<style>
+  .archive-hero__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 1rem;
+    margin-block-start: 1.2rem;
+    color: var(--ink-faint);
+    font: 0.63rem var(--font-mono);
   }
 
-  .page-wrap > h1 {
-    font-family: var(--font-display);
-    font-size: 2rem;
-    margin-block-end: 0.2rem;
+  .archive-hero__meta a {
+    color: var(--ai);
+    text-decoration: none;
   }
 
-  .muted {
-    color: var(--fg-soft);
-  }
-
-  .year-block {
-    margin-block-start: 1.8rem;
-  }
-
-  .year-block > h2 {
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    color: var(--fg-soft);
-    border-bottom: 1px solid var(--hairline);
-    padding-bottom: 0.35rem;
-    letter-spacing: 0.08em;
-  }
-
-  .year-posts {
+  .archive-year {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr));
-    gap: 0.8rem;
-    margin-block-start: 0.8rem;
+    grid-template-columns: minmax(8rem, 0.25fr) minmax(0, 1fr);
+    gap: clamp(1rem, 4vw, 4rem);
+    align-items: start;
+    margin-block-end: 3rem;
+  }
+
+  .archive-year__head {
+    position: sticky;
+    inset-block-start: calc(var(--header-height) + 1rem);
+    border-block-start: 1px solid var(--ink);
+    padding-block-start: 0.65rem;
+  }
+
+  .archive-year__head h2 {
+    margin: 0;
+    font-size: clamp(2.4rem, 5vw, 4.5rem);
+    font-weight: 590;
+    letter-spacing: -0.07em;
+    line-height: 0.9;
+  }
+
+  .archive-year__head span {
+    display: block;
+    margin-block-start: 0.5rem;
+    color: var(--ink-faint);
+    font: 0.61rem var(--font-mono);
+  }
+
+  .archive-year__list {
+    min-width: 0;
+  }
+
+  @media (max-width: 700px) {
+    .archive-year {
+      grid-template-columns: 1fr;
+    }
+
+    .archive-year__head {
+      position: static;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
   }
 </style>

@@ -5,7 +5,7 @@ import { getPublishedPosts } from "@/lib/posts";
 
 export async function getStaticPaths() {
   const posts = await getPublishedPosts();
-  const tags = new Set(posts.flatMap((p) => p.tags));
+  const tags = new Set(posts.flatMap((post) => post.tags));
   return [...tags].map((tag) => ({
     params: { tag },
     props: { tag },
@@ -13,25 +13,17 @@ export async function getStaticPaths() {
 }
 
 const { tag } = Astro.props;
-const posts = (await getPublishedPosts()).filter((p) => p.tags.includes(tag));
+const posts = (await getPublishedPosts()).filter((post) => post.tags.includes(tag));
 ---
 
-<BaseLayout title={`#${tag}`}>
-  <div class="shell page-wrap">
-    <p class="eyebrow">Tag</p>
+<BaseLayout title={`#${tag} · DMSJ`} description={`与 ${tag} 相关的 DMSJ 技术笔记。`}>
+  <header class="shell page-hero">
+    <p class="mono-label">Tag route</p>
     <h1>#{tag}</h1>
-    <p class="muted">{posts.length} 篇</p>
-    <div class="tag-posts">
-      {posts.map((post) => <ArticleCard post={post} />)}
-    </div>
+    <p class="page-hero__lead">{posts.length} 篇笔记在这个概念下相交。</p>
+    <a class="text-link" href="/tags/">返回标签索引</a>
+  </header>
+  <div class="shell section">
+    {posts.map((post, index) => <ArticleCard post={post} index={index} />)}
   </div>
 </BaseLayout>
-
-<style is:global>
-  .tag-posts {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr));
-    gap: 0.9rem;
-    margin-block-start: 1.2rem;
-  }
-</style>

@@ -5,6 +5,18 @@ date: 2026-08-30
 tags: ["写作", "面试", "学习方法"]
 lang: "zh-CN"
 draft: false
+kind: "essay"
+maturity: "established"
+verifiedAt: 2026-10-18
+question: "为什么写作是面试准备中不可替代的一环？"
+conclusion: "写作把模糊的口头理解压缩成可检查的论证，暴露空洞、形成可复用叙述，并留下可修订版本。"
+takeaways:
+  - "写不下去的地方通常就是理解缺口。"
+  - "结构化表达能迁移到面试叙述。"
+  - "版本化写作让知识持续被修正。"
+evidence:
+  level: "analyzed"
+  scope: "个人学习方法与工程写作实践。"
 ---
 
 准备技术面试时，大多数人刷题、背八股，却很少“写”。我发现写有三个刷题替代不了的作用。

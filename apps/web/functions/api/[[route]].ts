@@ -1,3 +1,10 @@
+import {
+  contentDomainSchema,
+  type DraftInput,
+  DraftInputSchema,
+  isPublicDomain,
+  safeContentPath,
+} from "@dmsj/content-model";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { recordPageView } from "../_shared/analytics";
@@ -9,8 +16,22 @@ import {
   getSession,
   type Session,
 } from "../_shared/auth";
-import { clearCookieHeader, cookieHeader } from "../_shared/cookies";
-import { dayRangeEpochMs, hashValue, isValidDay, randomToken } from "../_shared/crypto";
+import {
+  clearCookieHeader,
+  clearOAuthCookieHeader,
+  cookieHeader,
+  OAUTH_COOKIE,
+  oauthCookieHeader,
+  parseCookies,
+} from "../_shared/cookies";
+import {
+  boundedInt,
+  dayRangeEpochMs,
+  hashValue,
+  isValidDay,
+  randomToken,
+  requireProductionConfig,
+} from "../_shared/crypto";
 import { toCsv } from "../_shared/csv";
 import type { Env } from "../_shared/env";
 import { buildGitHubClient, type GitHubClient } from "../_shared/github";
@@ -20,10 +41,11 @@ type AppEnv = {
   Bindings: Env;
   Variables: {
     session: Session;
+    requestId: string;
   };
 };
 
-const app = new Hono<AppEnv>();
+export const app = new Hono<AppEnv>();
 
 function json(data: unknown, status = 200): Response {
   return Response.json(data, {
@@ -32,7 +54,21 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
+function jsonError(c: Context<AppEnv>, code: string, status: number, message?: string): Response {
+  return json(
+    {
+      error: {
+        code,
+        message: message ?? code.replaceAll("_", " "),
+        requestId: c.get("requestId"),
+      },
+    },
+    status,
+  );
+}
+
 app.use("*", async (c, next) => {
+  c.set("requestId", randomToken(8));
   await next();
   const headers = c.res.headers;
   headers.set("X-Content-Type-Options", "nosniff");
@@ -41,6 +77,7 @@ app.use("*", async (c, next) => {
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
   headers.set("Cross-Origin-Opener-Policy", "same-origin");
   headers.set("Cross-Origin-Resource-Policy", "same-origin");
+  headers.set("X-Request-Id", c.get("requestId"));
   headers.set(
     "Content-Security-Policy",
     "default-src 'none'; script-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
@@ -62,7 +99,14 @@ function originOf(c: Context<AppEnv>): string {
 /* ---------------- 公开：访客信标 ---------------- */
 
 app.post("/api/track", async (c) => {
+  if (c.env.CF_PAGES === "1" && c.env.CF_PAGES_BRANCH !== "main") {
+    return c.body(null, 204);
+  }
   const ip = clientIp(c);
+  const contentLength = Number(c.req.header("content-length") ?? "0");
+  if (Number.isFinite(contentLength) && contentLength > 16_384) {
+    return c.body(null, 413);
+  }
   const allowed = await rateLimit(c.env, "track", ip, 5_000, 86_400);
   if (!allowed) return c.body(null, 429);
 
@@ -82,8 +126,18 @@ app.post("/api/track", async (c) => {
     ua = c.req.header("user-agent") ?? "";
   }
   const country = c.req.header("cf-ipcountry") || null;
-  const result = await recordPageView(c.env, { path, referrer, ua, ip, country });
-  return c.body(null, result === "ok" ? 204 : 204);
+  try {
+    await recordPageView(c.env, {
+      path: path.slice(0, 600),
+      referrer: referrer.slice(0, 2_048),
+      ua,
+      ip,
+      country,
+    });
+  } catch {
+    // Analytics is optional and must not break public navigation or expose config errors.
+  }
+  return c.body(null, 204);
 });
 
 /* ---------------- 认证：GitHub OAuth ---------------- */
@@ -95,17 +149,24 @@ const loginSchema = z.object({
 app.post("/api/auth/login-start", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const parsed = loginSchema.safeParse(body);
-  if (!parsed.success) return json({ error: "invalid_request" }, 400);
+  if (!parsed.success) return jsonError(c, "invalid_request", 400);
+  const allowed = await rateLimit(c.env, "login", clientIp(c), 30, 3_600);
+  if (!allowed) return jsonError(c, "rate_limited", 429, "Too many login attempts");
+  try {
+    requireProductionConfig(c.env);
+  } catch {
+    return jsonError(c, "server_not_configured", 503);
+  }
 
   const clientId = c.env.GITHUB_CLIENT_ID;
   const clientSecret = c.env.GITHUB_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
-    return json({ error: "github_oauth_not_configured" }, 503);
+    return jsonError(c, "github_oauth_not_configured", 503);
   }
 
   if (c.env.TURNSTILE_SECRET_KEY) {
     const token = parsed.data.turnstileToken;
-    if (!token) return json({ error: "turnstile_required" }, 400);
+    if (!token) return jsonError(c, "turnstile_required", 400);
     const verify = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -116,11 +177,12 @@ app.post("/api/auth/login-start", async (c) => {
       }),
     });
     const check = (await verify.json()) as { success?: boolean };
-    if (!check.success) return json({ error: "turnstile_failed" }, 403);
+    if (!check.success) return jsonError(c, "turnstile_failed", 403);
   }
 
   const state = randomToken(16);
-  await c.env.SESSION.put(`oauth:state:${state}`, "1", {
+  const verifier = randomToken(24);
+  await c.env.SESSION.put(`oauth:state:${state}`, verifier, {
     expirationTtl: 600,
   });
   const redirectUri = `${originOf(c)}/api/auth/callback`;
@@ -130,14 +192,31 @@ app.post("/api/auth/login-start", async (c) => {
     scope: "read:user public_repo",
     state,
   });
-  return json({ url: `https://github.com/login/oauth/authorize?${params}` });
+  return new Response(
+    JSON.stringify({ url: `https://github.com/login/oauth/authorize?${params}` }),
+    {
+      status: 200,
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Request-Id": c.get("requestId"),
+        "Set-Cookie": oauthCookieHeader(c.env, verifier),
+      },
+    },
+  );
 });
 
 app.get("/api/auth/callback", async (c) => {
+  try {
+    requireProductionConfig(c.env);
+  } catch {
+    return c.redirect(`${originOf(c)}/admin/?error=server_not_configured`);
+  }
   const code = c.req.query("code") ?? "";
   const state = c.req.query("state") ?? "";
   const stored = await c.env.SESSION.get(`oauth:state:${state}`);
-  if (!code || !state || !stored) {
+  const verifier = parseCookies(c.req.raw)[OAUTH_COOKIE];
+  if (!code || !state || !stored || !verifier || stored !== verifier) {
     return c.redirect(`${originOf(c)}/admin/?error=bad_state`);
   }
   await c.env.SESSION.delete(`oauth:state:${state}`);
@@ -162,6 +241,7 @@ app.get("/api/auth/callback", async (c) => {
   if (!tokenBody.access_token) {
     await writeAudit(c.env, { login: "unknown" }, "LOGIN_FAILED", "auth", {
       ipHash: await hashValue(c.env, clientIp(c)),
+      requestId: c.get("requestId"),
     });
     return c.redirect(`${originOf(c)}/admin/?error=oauth_failed`);
   }
@@ -174,11 +254,11 @@ app.get("/api/auth/callback", async (c) => {
     return c.redirect(`${originOf(c)}/admin/?error=oauth_failed`);
   }
 
-  const allowLogin = c.env.ALLOWED_GITHUB_LOGIN;
-  if (allowLogin && user.login !== allowLogin) {
+  if (user.login !== c.env.ALLOWED_GITHUB_LOGIN) {
     await writeAudit(c.env, user, "LOGIN_DENIED", "auth", {
       ipHash: await hashValue(c.env, clientIp(c)),
       success: false,
+      requestId: c.get("requestId"),
     });
     return c.redirect(`${originOf(c)}/admin/?error=denied`);
   }
@@ -187,31 +267,39 @@ app.get("/api/auth/callback", async (c) => {
   await writeAudit(c.env, user, "LOGIN", "auth", {
     resourceId: session.id,
     ipHash: await hashValue(c.env, clientIp(c)),
+    requestId: c.get("requestId"),
   });
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: `${originOf(c)}/admin/`,
-      "Set-Cookie": cookieHeader(c.env, session.id, 60 * 60 * 24 * 7),
-    },
-  });
+  const headers = new Headers({ Location: `${originOf(c)}/admin/` });
+  headers.append("Set-Cookie", cookieHeader(c.env, session.id, 60 * 60 * 24 * 7));
+  headers.append("Set-Cookie", clearOAuthCookieHeader(c.env));
+  return new Response(null, { status: 302, headers });
 });
 
 app.get("/api/auth/me", async (c) => {
   const session = await getSession(c.env, c.req.raw);
   if (!session) return json({ user: null });
-  return json({ user: session.user });
+  return json({ user: session.user, csrfToken: session.csrfToken });
+});
+
+app.get("/api/auth/config", async (c) => {
+  return json({
+    turnstile: {
+      enabled: Boolean(c.env.TURNSTILE_SITE_KEY && c.env.TURNSTILE_SECRET_KEY),
+      siteKey: c.env.TURNSTILE_SITE_KEY ?? null,
+    },
+  });
 });
 
 app.post("/api/auth/logout", async (c) => {
   const session = await getSession(c.env, c.req.raw);
-  if (!session || !checkCsrf(c.env, c.req.raw)) {
-    return json({ error: "unauthorized" }, 401);
+  if (!session || !checkCsrf(c.env, c.req.raw, session)) {
+    return jsonError(c, "unauthorized", 401);
   }
   await destroySession(c.env, c.req.raw);
   if (session) {
     await writeAudit(c.env, session.user, "LOGOUT", "auth", {
       resourceId: session.id,
+      requestId: c.get("requestId"),
     });
   }
   return new Response(null, {
@@ -222,14 +310,46 @@ app.post("/api/auth/logout", async (c) => {
 
 /* ---------------- Admin 鉴权中间件 ---------------- */
 
-app.use("/api/admin/*", async (c, next) => {
-  const session = await getSession(c.env, c.req.raw);
-  if (!session) return json({ error: "unauthorized" }, 401);
-  c.set("session", session);
-  if (c.req.method !== "GET" && !checkCsrf(c.env, c.req.raw)) {
-    return json({ error: "csrf_failed" }, 403);
+async function auditAdminFailure(
+  c: Context<AppEnv>,
+  session: Session,
+  status: number,
+): Promise<void> {
+  try {
+    await writeAudit(c.env, session.user, "ADMIN_WRITE_FAILED", "admin", {
+      resourceId: new URL(c.req.url).pathname,
+      success: false,
+      ipHash: await hashValue(c.env, clientIp(c)),
+      details: { method: c.req.method, status },
+      requestId: c.get("requestId"),
+    });
+  } catch {
+    // The response must remain authoritative if the audit store is unavailable.
   }
-  await next();
+}
+
+app.use("/api/admin/*", async (c, next) => {
+  try {
+    requireProductionConfig(c.env);
+  } catch {
+    return jsonError(c, "server_not_configured", 503);
+  }
+  const session = await getSession(c.env, c.req.raw);
+  if (!session) return jsonError(c, "unauthorized", 401);
+  c.set("session", session);
+  if (c.req.method !== "GET" && !checkCsrf(c.env, c.req.raw, session)) {
+    await auditAdminFailure(c, session, 403);
+    return jsonError(c, "csrf_failed", 403);
+  }
+  try {
+    await next();
+  } catch (error) {
+    if (c.req.method !== "GET") await auditAdminFailure(c, session, 500);
+    throw error;
+  }
+  if (c.req.method !== "GET" && c.res.status >= 400) {
+    await auditAdminFailure(c, session, c.res.status);
+  }
 });
 
 /* ---------------- 访客统计 ---------------- */
@@ -243,20 +363,26 @@ const groupColumns = {
   device: "device",
 } as const;
 
-function requireDateRange(query: Record<string, string>) {
+type DateRangeResult =
+  | { ok: true; from: string; to: string }
+  | { ok: false; errorCode: "invalid_date_range" | "date_range_too_large" };
+
+function requireDateRange(query: Record<string, string>): DateRangeResult {
   const from = query.from ?? "";
   const to = query.to ?? "";
   if (!isValidDay(from) || !isValidDay(to)) {
-    return { error: json({ error: "invalid_date_range" }, 400) };
+    return { ok: false, errorCode: "invalid_date_range" };
   }
-  if (from > to) return { error: json({ error: "invalid_date_range" }, 400) };
-  return { from, to };
+  if (from > to) return { ok: false, errorCode: "invalid_date_range" };
+  const span = new Date(`${to}T00:00:00Z`).getTime() - new Date(`${from}T00:00:00Z`).getTime();
+  if (span > 366 * 86_400_000) return { ok: false, errorCode: "date_range_too_large" };
+  return { ok: true, from, to };
 }
 
 app.get("/api/admin/analytics/overview", async (c) => {
   const query = c.req.query();
   const range = requireDateRange(query);
-  if ("error" in range) return range.error;
+  if (!range.ok) return jsonError(c, range.errorCode, 400);
   const offset = Number(c.env.ANALYTICS_TZ_MINUTES ?? "480");
   const { start, end } = dayRangeEpochMs(range.from, range.to, offset);
   const total = await c.env.DB.prepare(
@@ -287,18 +413,18 @@ app.get("/api/admin/analytics/overview", async (c) => {
 app.get("/api/admin/analytics/breakdown", async (c) => {
   const query = c.req.query();
   const range = requireDateRange(query);
-  if ("error" in range) return range.error;
+  if (!range.ok) return jsonError(c, range.errorCode, 400);
   const group = (query.group ?? "path") as keyof typeof groupColumns;
   const column = groupColumns[group];
-  if (!column) return json({ error: "invalid_group" }, 400);
+  if (!column) return jsonError(c, "invalid_group", 400);
   const q = (query.q ?? "").trim().slice(0, 200);
-  const pageSize = Math.min(Number(query.pageSize ?? "20"), 100);
-  const page = Math.max(Number(query.page ?? "1"), 1);
+  const pageSize = boundedInt(query.pageSize, 20, 1, 100);
+  const page = boundedInt(query.page, 1, 1, 100_000);
   const offset = (page - 1) * pageSize;
   const sql = `
     SELECT ${column} AS key, SUM(views) AS views
     FROM page_view_daily
-    WHERE day BETWEEN ? AND ? ${q ? "AND path LIKE ?" : ""}
+    WHERE day BETWEEN ? AND ? ${q ? "AND path LIKE ? ESCAPE '\\'" : ""}
     GROUP BY ${column}
     ORDER BY views DESC, key ASC
     LIMIT ? OFFSET ?`;
@@ -314,7 +440,7 @@ app.get("/api/admin/analytics/breakdown", async (c) => {
   const count = await c.env.DB.prepare(
     `SELECT COUNT(*) AS total FROM (
       SELECT 1 FROM page_view_daily
-      WHERE day BETWEEN ? AND ? ${q ? "AND path LIKE ?" : ""}
+      WHERE day BETWEEN ? AND ? ${q ? "AND path LIKE ? ESCAPE '\\'" : ""}
       GROUP BY ${column}
     )`,
   )
@@ -349,9 +475,9 @@ function escapeLike(value: string): string {
 
 app.get("/api/admin/audit-logs", async (c) => {
   const range = requireDateRange(c.req.query());
-  if ("error" in range) return range.error;
-  const pageSize = Math.min(Number(c.req.query("pageSize") ?? "50"), 200);
-  const page = Math.max(Number(c.req.query("page") ?? "1"), 1);
+  if (!range.ok) return jsonError(c, range.errorCode, 400);
+  const pageSize = boundedInt(c.req.query("pageSize"), 50, 1, 200);
+  const page = boundedInt(c.req.query("page"), 1, 1, 100_000);
   const offset = (page - 1) * pageSize;
   const total = await c.env.DB.prepare(
     `SELECT COUNT(*) AS total FROM audit_logs WHERE ts >= ? AND ts < ?`,
@@ -385,12 +511,12 @@ function sessionOf(c: Context<AppEnv>): Session | null {
 
 app.get("/api/admin/articles", async (c) => {
   const session = sessionOf(c);
-  if (!session) return json({ error: "unauthorized" }, 401);
+  if (!session) return jsonError(c, "unauthorized", 401);
   const gh = buildGitHubClient(c.env, session.githubToken, session.user.login);
   const files = await gh.getTree().catch(() => []);
   const drafts = await c.env.DB.prepare(
     `SELECT id, domain, dirs, slug, title, description, tags_json AS tagsJson,
-            series, lang, updated_at AS updatedAt
+            series, lang, metadata_json AS metadataJson, version, updated_at AS updatedAt
      FROM drafts ORDER BY updated_at DESC`,
   ).all<{
     id: string;
@@ -402,6 +528,8 @@ app.get("/api/admin/articles", async (c) => {
     tagsJson: string;
     series: string | null;
     lang: string;
+    metadataJson: string;
+    version: number;
     updatedAt: number;
   }>();
   const published = files
@@ -417,42 +545,47 @@ app.get("/api/admin/articles", async (c) => {
       ...row,
       dirs: JSON.parse(row.dirs) as string[],
       tags: JSON.parse(row.tagsJson) as string[],
+      metadata: JSON.parse(row.metadataJson) as Record<string, unknown>,
     })),
   });
 });
 
-const draftSchema = z.object({
-  id: z.string().optional(),
-  domain: z.string().min(1).max(40),
-  dirs: z
-    .array(z.string().regex(/^[a-z0-9-]+$/))
-    .max(6)
-    .default([]),
-  slug: z
-    .string()
-    .regex(/^[a-z0-9-]+$/)
-    .max(80),
-  title: z.string().min(1).max(120),
-  description: z.string().min(1).max(320),
-  tags: z.array(z.string().trim().min(1)).max(12).default([]),
-  series: z.string().optional(),
-  lang: z.string().default("zh-CN"),
-  body: z.string().min(1).max(500_000),
-});
+const draftSchema = DraftInputSchema;
 
 app.post("/api/admin/drafts", async (c) => {
   const session = sessionOf(c);
-  if (!session) return json({ error: "unauthorized" }, 401);
+  if (!session) return jsonError(c, "unauthorized", 401);
   const parsed = draftSchema.safeParse(await c.req.json().catch(() => ({})));
-  if (!parsed.success) return json({ error: parsed.error.issues }, 400);
+  if (!parsed.success) {
+    return jsonError(c, "invalid_request", 400, "Draft validation failed");
+  }
   const data = parsed.data;
   const id = data.id ?? randomToken(16);
   const now = Date.now();
-  const existing = await c.env.DB.prepare("SELECT 1 FROM drafts WHERE id = ?").bind(id).first();
+  const metadata = {
+    kind: data.kind,
+    topic: data.topic ?? null,
+    maturity: data.maturity ?? null,
+    sources: data.sources,
+    evidence: data.evidence ?? null,
+    lab: data.lab ?? null,
+    related: data.related,
+    verifiedAt: data.verifiedAt ?? null,
+    question: data.question ?? null,
+    conclusion: data.conclusion ?? null,
+    takeaways: data.takeaways,
+  };
+  const existing = await c.env.DB.prepare("SELECT version FROM drafts WHERE id = ?")
+    .bind(id)
+    .first<{ version: number }>();
   if (existing) {
-    await c.env.DB.prepare(
+    if (data.version && data.version !== existing.version) {
+      return jsonError(c, "draft_conflict", 409, "The draft was modified elsewhere");
+    }
+    const updated = await c.env.DB.prepare(
       `UPDATE drafts SET domain=?, dirs=?, slug=?, title=?, description=?, tags_json=?,
-       series=?, lang=?, body=?, updated_at=? WHERE id=?`,
+       series=?, lang=?, body=?, metadata_json=?, version=version+1, updated_at=?
+       WHERE id=? AND version=?`,
     )
       .bind(
         data.domain,
@@ -464,15 +597,21 @@ app.post("/api/admin/drafts", async (c) => {
         data.series ?? null,
         data.lang,
         data.body,
+        JSON.stringify(metadata),
         now,
         id,
+        existing.version,
       )
       .run();
+    if (Number(updated.meta.changes ?? 0) === 0) {
+      return jsonError(c, "draft_conflict", 409, "The draft was modified elsewhere");
+    }
   } else {
     await c.env.DB.prepare(
       `INSERT INTO drafts
-       (id, domain, dirs, slug, title, description, tags_json, series, lang, body, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, domain, dirs, slug, title, description, tags_json, series, lang, body,
+        metadata_json, version, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
     )
       .bind(
         id,
@@ -485,6 +624,7 @@ app.post("/api/admin/drafts", async (c) => {
         data.series ?? null,
         data.lang,
         data.body,
+        JSON.stringify(metadata),
         now,
         now,
       )
@@ -493,16 +633,18 @@ app.post("/api/admin/drafts", async (c) => {
   await writeAudit(c.env, session.user, "UPSERT_DRAFT", "article", {
     resourceId: id,
     ipHash: await hashValue(c.env, clientIp(c)),
+    requestId: c.get("requestId"),
   });
   return json({ id });
 });
 
 app.get("/api/admin/drafts/:id", async (c) => {
   const session = sessionOf(c);
-  if (!session) return json({ error: "unauthorized" }, 401);
+  if (!session) return jsonError(c, "unauthorized", 401);
   const row = await c.env.DB.prepare(
     `SELECT id, domain, dirs, slug, title, description, tags_json AS tagsJson,
-            series, lang, body, updated_at AS updatedAt
+            series, lang, body, metadata_json AS metadataJson, version,
+            updated_at AS updatedAt
      FROM drafts WHERE id = ?`,
   )
     .bind(c.req.param("id"))
@@ -517,20 +659,28 @@ app.get("/api/admin/drafts/:id", async (c) => {
       series: string | null;
       lang: string;
       body: string;
+      metadataJson: string;
+      version: number;
       updatedAt: number;
     }>();
-  if (!row) return json({ error: "not_found" }, 404);
-  return json({ ...row, dirs: JSON.parse(row.dirs), tags: JSON.parse(row.tagsJson) });
+  if (!row) return jsonError(c, "not_found", 404);
+  return json({
+    ...row,
+    dirs: JSON.parse(row.dirs),
+    tags: JSON.parse(row.tagsJson),
+    metadata: JSON.parse(row.metadataJson),
+  });
 });
 
 app.delete("/api/admin/drafts/:id", async (c) => {
   const session = sessionOf(c);
-  if (!session) return json({ error: "unauthorized" }, 401);
+  if (!session) return jsonError(c, "unauthorized", 401);
   const id = c.req.param("id");
   await c.env.DB.prepare("DELETE FROM drafts WHERE id = ?").bind(id).run();
   await writeAudit(c.env, session.user, "DELETE_DRAFT", "article", {
     resourceId: id,
     ipHash: await hashValue(c.env, clientIp(c)),
+    requestId: c.get("requestId"),
   });
   return c.body(null, 204);
 });
@@ -539,42 +689,73 @@ function yamlString(value: string): string {
   return `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"').replaceAll("\n", " ")}"`;
 }
 
-function buildMarkdown(draft: {
-  domain: string;
-  dirs: string[];
-  slug: string;
-  title: string;
-  description: string;
-  tags: string[];
-  series?: string;
-  lang: string;
-  body: string;
-}): string {
-  const frontmatter = [
+function yamlArray(values: string[]): string {
+  return `[${values.map((value) => yamlString(value)).join(", ")}]`;
+}
+
+export function buildMarkdown(draft: DraftInput): string {
+  const lines = [
     "---",
     `title: ${yamlString(draft.title)}`,
     `description: ${yamlString(draft.description)}`,
     `date: ${new Date().toISOString().slice(0, 10)}`,
-    `tags: [${draft.tags.map((tag) => yamlString(tag)).join(", ")}]`,
+    `tags: ${yamlArray(draft.tags)}`,
     draft.series ? `series: ${yamlString(draft.series)}` : "",
     `lang: ${yamlString(draft.lang)}`,
-    "draft: false",
-    "---",
-    "",
-    draft.body.trim(),
-    "",
-  ]
-    .filter((line) => line !== "")
-    .join("\n");
-  return `\n${frontmatter}\n`;
+    `kind: ${yamlString(draft.kind)}`,
+    draft.topic ? `topic: ${yamlString(draft.topic)}` : "",
+    draft.maturity ? `maturity: ${yamlString(draft.maturity)}` : "",
+    draft.question ? `question: ${yamlString(draft.question)}` : "",
+    draft.conclusion ? `conclusion: ${yamlString(draft.conclusion)}` : "",
+  ];
+
+  if (draft.takeaways.length > 0) {
+    lines.push("takeaways:");
+    for (const takeaway of draft.takeaways) lines.push(`  - ${yamlString(takeaway)}`);
+  }
+  if (draft.evidence) {
+    lines.push("evidence:");
+    lines.push(`  level: ${yamlString(draft.evidence.level)}`);
+    if (draft.evidence.scope) lines.push(`  scope: ${yamlString(draft.evidence.scope)}`);
+    if (draft.evidence.basis) lines.push(`  basis: ${yamlString(draft.evidence.basis)}`);
+    if (draft.evidence.caveats.length > 0) {
+      lines.push("  caveats:");
+      for (const caveat of draft.evidence.caveats) lines.push(`    - ${yamlString(caveat)}`);
+    }
+  }
+  if (draft.sources.length > 0) {
+    lines.push("sources:");
+    for (const source of draft.sources) {
+      lines.push(`  - title: ${yamlString(source.title)}`);
+      lines.push(`    url: ${yamlString(source.url)}`);
+      if (source.authors) lines.push(`    authors: ${yamlString(source.authors)}`);
+      if (source.publisher) lines.push(`    publisher: ${yamlString(source.publisher)}`);
+      if (source.year) lines.push(`    year: ${source.year}`);
+      lines.push(`    kind: ${yamlString(source.kind)}`);
+      if (source.note) lines.push(`    note: ${yamlString(source.note)}`);
+    }
+  }
+  if (draft.lab) lines.push(`lab: ${yamlString(draft.lab)}`);
+  if (draft.verifiedAt) {
+    lines.push(`verifiedAt: ${new Date(draft.verifiedAt).toISOString().slice(0, 10)}`);
+  }
+  if (draft.related.length > 0) {
+    lines.push("related:");
+    for (const related of draft.related) lines.push(`  - ${yamlString(related)}`);
+  }
+  lines.push("draft: false", "---");
+
+  const frontmatter = lines.filter((line) => line !== "").join("\n");
+  return `${frontmatter}\n\n${draft.body.trim()}\n`;
 }
 
 app.post("/api/admin/drafts/:id/publish", async (c) => {
   const session = sessionOf(c);
-  if (!session) return json({ error: "unauthorized" }, 401);
+  if (!session) return jsonError(c, "unauthorized", 401);
   const row = await c.env.DB.prepare(
     `SELECT id, domain, dirs, slug, title, description, tags_json AS tagsJson,
-            series, lang, body FROM drafts WHERE id = ?`,
+            series, lang, body, metadata_json AS metadataJson, version
+     FROM drafts WHERE id = ?`,
   )
     .bind(c.req.param("id"))
     .first<{
@@ -588,24 +769,50 @@ app.post("/api/admin/drafts/:id/publish", async (c) => {
       series: string | null;
       lang: string;
       body: string;
+      metadataJson: string;
+      version: number;
     }>();
-  if (!row) return json({ error: "not_found" }, 404);
-  const draft = {
-    ...row,
+  if (!row) return jsonError(c, "not_found", 404);
+  const domain = contentDomainSchema.safeParse(row.domain);
+  if (!domain.success) return jsonError(c, "invalid_domain", 400);
+  const metadata = JSON.parse(row.metadataJson || "{}") as Partial<DraftInput>;
+  const draft: DraftInput = {
+    domain: domain.data,
     dirs: JSON.parse(row.dirs) as string[],
+    slug: row.slug,
+    title: row.title,
+    description: row.description,
     tags: JSON.parse(row.tagsJson) as string[],
     series: row.series ?? undefined,
+    lang: row.lang,
+    body: row.body,
+    kind: metadata.kind ?? "note",
+    topic: metadata.topic,
+    maturity: metadata.maturity,
+    sources: metadata.sources ?? [],
+    evidence: metadata.evidence,
+    lab: metadata.lab,
+    related: metadata.related ?? [],
+    verifiedAt: metadata.verifiedAt ? new Date(metadata.verifiedAt) : new Date(),
+    question: metadata.question,
+    conclusion: metadata.conclusion,
+    takeaways: metadata.takeaways ?? [],
   };
-  const path = `content/${draft.domain}/${draft.dirs.length ? `${draft.dirs.join("/")}/` : ""}${draft.slug}.md`;
+  const path = safeContentPath(
+    `content/${draft.domain}/${draft.dirs.length ? `${draft.dirs.join("/")}/` : ""}${draft.slug}.md`,
+  );
+  if (!path) return jsonError(c, "invalid_content_path", 400);
   const gh = buildGitHubClient(c.env, session.githubToken, session.user.login);
   try {
     const tree = await gh.getTree();
     const existing = tree.find((file) => file.path === path);
+    if (existing)
+      return jsonError(c, "publish_conflict", 409, "A published file already exists at this path");
     await gh.putFile(
       path,
       buildMarkdown(draft),
       `docs(${draft.domain}): publish ${draft.slug}`,
-      existing?.sha,
+      undefined,
     );
   } catch (error) {
     await writeAudit(c.env, session.user, "PUBLISH_FAILED", "article", {
@@ -613,15 +820,21 @@ app.post("/api/admin/drafts/:id/publish", async (c) => {
       success: false,
       ipHash: await hashValue(c.env, clientIp(c)),
       details: error instanceof Error ? error.message : String(error),
+      requestId: c.get("requestId"),
     });
-    return json({ error: "publish_failed" }, 502);
+    return jsonError(c, "publish_failed", 502);
   }
-  await c.env.DB.prepare("DELETE FROM drafts WHERE id = ?").bind(row.id).run();
+  const removed = await c.env.DB.prepare("DELETE FROM drafts WHERE id = ? AND version = ?")
+    .bind(row.id, row.version)
+    .run();
+  const draftRetained = Number(removed.meta.changes ?? 0) === 0;
   await writeAudit(c.env, session.user, "PUBLISH", "article", {
     resourceId: path,
     ipHash: await hashValue(c.env, clientIp(c)),
+    details: draftRetained ? { draftRetained: true } : undefined,
+    requestId: c.get("requestId"),
   });
-  return json({ path });
+  return json({ path, draftRetained });
 });
 
 const publishedWriteSchema = z.object({
@@ -643,10 +856,17 @@ const rawArticleSchema = z.object({
 
 app.put("/api/admin/raw-article", async (c) => {
   const session = sessionOf(c);
-  if (!session) return json({ error: "unauthorized" }, 401);
+  if (!session) return jsonError(c, "unauthorized", 401);
   const parsed = rawArticleSchema.safeParse(await c.req.json().catch(() => ({})));
-  if (!parsed.success) return json({ error: parsed.error.issues }, 400);
+  if (!parsed.success) {
+    return jsonError(c, "invalid_request", 400, "Article validation failed");
+  }
   const data = parsed.data;
+  const safePath = safeContentPath(data.path);
+  if (!safePath || !isPublicDomain(safePath.split("/")[1] ?? "")) {
+    return jsonError(c, "invalid_path", 400);
+  }
+  data.path = safePath;
   const gh = buildGitHubClient(c.env, session.githubToken, session.user.login);
   const oldSha =
     data.sha ??
@@ -660,16 +880,24 @@ app.put("/api/admin/raw-article", async (c) => {
   await writeAudit(c.env, session.user, "UPDATE_ARTICLE", "article", {
     resourceId: data.path,
     ipHash: await hashValue(c.env, clientIp(c)),
+    requestId: c.get("requestId"),
   });
   return json({ ok: true });
 });
 
 app.put("/api/admin/article", async (c) => {
   const session = sessionOf(c);
-  if (!session) return json({ error: "unauthorized" }, 401);
+  if (!session) return jsonError(c, "unauthorized", 401);
   const parsed = publishedWriteSchema.safeParse(await c.req.json().catch(() => ({})));
-  if (!parsed.success) return json({ error: parsed.error.issues }, 400);
+  if (!parsed.success) {
+    return jsonError(c, "invalid_request", 400, "Article validation failed");
+  }
   const data = parsed.data;
+  const safePath = safeContentPath(data.path);
+  if (!safePath || !isPublicDomain(safePath.split("/")[1] ?? "")) {
+    return jsonError(c, "invalid_path", 400);
+  }
+  data.path = safePath;
   const gh = buildGitHubClient(c.env, session.githubToken, session.user.login);
   const oldSha =
     data.sha ??
@@ -691,38 +919,51 @@ app.put("/api/admin/article", async (c) => {
   await writeAudit(c.env, session.user, "UPDATE_ARTICLE", "article", {
     resourceId: data.path,
     ipHash: await hashValue(c.env, clientIp(c)),
+    requestId: c.get("requestId"),
   });
   return json({ ok: true });
 });
 
 app.get("/api/admin/article", async (c) => {
   const session = sessionOf(c);
-  if (!session) return json({ error: "unauthorized" }, 401);
+  if (!session) return jsonError(c, "unauthorized", 401);
   const path = c.req.query("path") ?? "";
-  if (!path.startsWith("content/")) return json({ error: "invalid_path" }, 400);
+  const safePath = safeContentPath(path);
+  if (!safePath || !isPublicDomain(safePath.split("/")[1] ?? "")) {
+    return jsonError(c, "invalid_path", 400);
+  }
   const gh = buildGitHubClient(c.env, session.githubToken, session.user.login);
-  const content = await gh.getRawFile(path).catch(() => null);
-  if (content === null) return json({ error: "not_found" }, 404);
-  return json({ path, content });
+  const content = await gh.getRawFile(safePath).catch(() => null);
+  if (content === null) return jsonError(c, "not_found", 404);
+  return json({ path: safePath, content });
 });
 
 app.delete("/api/admin/article", async (c) => {
   const session = sessionOf(c);
-  if (!session) return json({ error: "unauthorized" }, 401);
+  if (!session) return jsonError(c, "unauthorized", 401);
   const path = c.req.query("path") ?? "";
-  if (!path.startsWith("content/")) return json({ error: "invalid_path" }, 400);
+  const safePath = safeContentPath(path);
+  if (!safePath || !isPublicDomain(safePath.split("/")[1] ?? "")) {
+    return jsonError(c, "invalid_path", 400);
+  }
   const gh = buildGitHubClient(c.env, session.githubToken, session.user.login);
-  const sha = (await gh.getTree()).find((f) => f.path === path)?.sha;
-  if (!sha) return json({ error: "not_found" }, 404);
-  await gh.deleteFile(path, sha, `docs: remove ${path}`);
+  const sha = (await gh.getTree()).find((f) => f.path === safePath)?.sha;
+  if (!sha) return jsonError(c, "not_found", 404);
+  await gh.deleteFile(safePath, sha, `docs: remove ${safePath}`);
   await writeAudit(c.env, session.user, "DELETE_ARTICLE", "article", {
-    resourceId: path,
+    resourceId: safePath,
     ipHash: await hashValue(c.env, clientIp(c)),
+    requestId: c.get("requestId"),
   });
   return c.body(null, 204);
 });
 
-app.notFound(() => json({ error: "not_found" }, 404));
+app.notFound((c) => jsonError(c, "not_found", 404));
+
+app.onError((error, c) => {
+  console.error("Unhandled API error", c.get("requestId"), error);
+  return jsonError(c, "internal_error", 500, "Unexpected server error");
+});
 
 export const onRequest: PagesFunction<Env> = async (context) => {
   return app.fetch(context.request, context.env);

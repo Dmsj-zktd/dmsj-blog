@@ -1,6 +1,7 @@
 # 复制为 .dev.vars（gitignore）后填写本地值
 ENVIRONMENT=development
 IP_SALT=change-me-local-only
+SESSION_SECRET=change-me-32-byte-random-value
 
 # GitHub OAuth App（生产必须配置）
 GITHUB_CLIENT_ID=
@@ -17,3 +18,4 @@ SITE_URL=https://dmsj-blog.pages.dev
 
 # 可选 Cloudflare Turnstile
 TURNSTILE_SECRET_KEY=
+TURNSTILE_SITE_KEY=

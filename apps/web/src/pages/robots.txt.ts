@@ -1,3 +1,5 @@
+import { site } from "@/config/site";
+
 export const prerender = true;
 
 export function GET() {
@@ -8,7 +10,7 @@ export function GET() {
     "Disallow: /api/",
     "Disallow: /scripts/",
     "",
-    "Sitemap: https://dmsj-blog.pages.dev/sitemap.xml",
+    `Sitemap: ${site.url}/sitemap.xml`,
     "",
   ].join("\n");
   return new Response(body, {

@@ -7,6 +7,27 @@ series: "LLM 应用工程笔记"
 lang: "zh-CN"
 draft: false
 featured: true
+kind: "note"
+maturity: "emerging"
+verifiedAt: 2026-10-18
+question: "多轮工具调用如何在生产环境中保持有界、幂等和可观测？"
+conclusion: "Agent 稳定性来自确定性的执行边界：步数、时间、幂等、结构化输出、审计和回滚，而不是单纯依赖更强模型。"
+takeaways:
+  - "超时和最大步数是协议的一部分。"
+  - "写工具必须携带幂等键。"
+  - "校验失败应成为可记录的修复信号。"
+evidence:
+  level: "analyzed"
+  scope: "生产排障经验与 Agent 工程原则分析。"
+sources:
+  - title: "Model Context Protocol specification"
+    url: "https://modelcontextprotocol.io/specification/2025-06-18"
+    year: 2025
+    kind: "specification"
+lab: "tool-loop"
+related:
+  - "llm-agent/frontier/mcp-trust-boundary"
+  - "llm-agent/frontier/agent-reliability"
 ---
 
 Demo 里 Agent 调用工具很顺，一到生产就出现“无限重试”“重复副作用”“解析失败”。这篇是我把工具循环拆开后的三个工程结论。

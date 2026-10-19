@@ -1,27 +1,32 @@
 ---
+import katexCssUrl from "katex/dist/katex.min.css?url";
+import newsreaderCssUrl from "@fontsource-variable/newsreader/index.css?url";
 import { getCollection, render } from "astro:content";
+import { getFrontierTopicByPath } from "@dmsj/content-model/frontier";
 
-import BaseLayout from "@/layouts/BaseLayout.astro";
 import ArticleCard from "@/components/ArticleCard.astro";
 import Comments from "@/components/Comments.astro";
+import TopicDiagram from "@/components/TopicDiagram.astro";
 import { site } from "@/config/site";
-import { contentModules, getModule, humanizeCategorySegment } from "@/site/content-registry";
-import { getAllPosts, formatDate, getReadingMinutes, type PostSummary } from "@/lib/posts";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import {
+  formatDate,
+  getAllPosts,
+  getReadingMinutes,
+  getRelatedPosts,
+  type PostSummary,
+} from "@/lib/posts";
+import {
+  contentModules,
+  getModule,
+  humanizeCategorySegment,
+} from "@/site/content-registry";
+import { getLab } from "@/lib/labs";
 
 type Props =
-  | {
-      kind: "module";
-      moduleKey: string;
-    }
-  | {
-      kind: "dir";
-      moduleKey: string;
-      dirPath: string;
-    }
-  | {
-      kind: "article";
-      id: string;
-    };
+  | { kind: "module"; moduleKey: string }
+  | { kind: "dir"; moduleKey: string; dirPath: string }
+  | { kind: "article"; id: string };
 
 export async function getStaticPaths() {
   const posts = await getAllPosts();
@@ -32,21 +37,21 @@ export async function getStaticPaths() {
       params: { domain: module.key, path: undefined },
       props: { kind: "module", moduleKey: module.key },
     });
-    const domainPosts = posts.filter((p) => p.domain === module.key && !p.draft);
+    const domainPosts = posts.filter((post) => post.domain === module.key && !post.draft);
     const dirSeen = new Set<string>();
     for (const post of domainPosts) {
       paths.push({
         params: { domain: module.key, path: post.id.slice(module.key.length + 1) },
         props: { kind: "article", id: post.id },
       });
-      let acc = "";
+      let accumulated = "";
       for (const dir of post.dirs) {
-        acc = acc ? `${acc}/${dir}` : dir;
-        if (!dirSeen.has(acc)) {
-          dirSeen.add(acc);
+        accumulated = accumulated ? `${accumulated}/${dir}` : dir;
+        if (!dirSeen.has(accumulated)) {
+          dirSeen.add(accumulated);
           paths.push({
-            params: { domain: module.key, path: acc },
-            props: { kind: "dir", moduleKey: module.key, dirPath: acc },
+            params: { domain: module.key, path: accumulated },
+            props: { kind: "dir", moduleKey: module.key, dirPath: accumulated },
           });
         }
       }
@@ -57,31 +62,31 @@ export async function getStaticPaths() {
 
 const props = Astro.props;
 const allPosts = await getAllPosts();
+const module = "moduleKey" in props ? getModule(props.moduleKey) : undefined;
 
 let modulePosts: PostSummary[] = [];
-let moduleTitle = "";
+let moduleTitle = module?.label ?? "内容";
+let moduleDescription = module?.description ?? "";
 let categoryTitle = "";
 let breadcrumb: string[] = [];
 let post: PostSummary | undefined;
 let renderedContent: Awaited<ReturnType<typeof render>> | undefined;
 
 if (props.kind === "module" || props.kind === "dir") {
-  const module = getModule(props.moduleKey);
   if (module) {
-    moduleTitle = module.label;
-    modulePosts = allPosts.filter((p) => p.domain === module.key && !p.draft);
+    modulePosts = allPosts.filter((item) => item.domain === module.key && !item.draft);
     if (props.kind === "dir") {
       const dirs = props.dirPath.split("/");
       const prefix = `${module.key}/${props.dirPath}/`;
-      modulePosts = modulePosts.filter((p) => p.id.startsWith(prefix));
+      modulePosts = modulePosts.filter((item) => item.id.startsWith(prefix));
       categoryTitle = dirs.map(humanizeCategorySegment).join(" / ");
       breadcrumb = dirs;
     }
   }
 } else {
-  const entry = await getCollection("blog");
-  const found = entry.find((e) => e.id === props.id);
-  const summary = allPosts.find((p) => p.id === props.id);
+  const entries = await getCollection("blog");
+  const found = entries.find((entry) => entry.id === props.id);
+  const summary = allPosts.find((item) => item.id === props.id);
   if (found && summary) {
     post = summary;
     renderedContent = await render(found);
@@ -89,28 +94,63 @@ if (props.kind === "module" || props.kind === "dir") {
   }
 }
 
+const frontierTopic = post ? getFrontierTopicByPath(post.id) : undefined;
+const articleLab = post?.lab ? getLab(post.lab) : undefined;
+const related = post ? await getRelatedPosts(post, 3) : [];
+const tocItems =
+  renderedContent?.headings.filter((heading) => heading.depth >= 2 && heading.depth <= 3) ?? [];
 const pageTitle = post
   ? post.title
   : categoryTitle
     ? `${categoryTitle} · ${moduleTitle}`
     : moduleTitle;
 
-const tocItems =
-  renderedContent?.headings.filter((heading) => heading.depth >= 2 && heading.depth <= 3) ?? [];
-
-const listingModuleKey =
-  props.kind === "module" || props.kind === "dir" ? props.moduleKey : undefined;
-const listingDirs = props.kind === "dir" ? props.dirPath.split("/") : [];
+const kindLabels: Record<string, string> = {
+  flagship: "旗舰研究",
+  experiment: "实验笔记",
+  synthesis: "综合研究",
+  lab: "解释实验",
+  note: "工程笔记",
+  essay: "研究随笔",
+  project: "项目复盘",
+};
+const maturityLabels: Record<string, string> = {
+  emerging: "快速演化",
+  established: "已建立",
+  experimental: "实验性",
+};
+const evidenceLabels: Record<string, string> = {
+  analyzed: "来源分析",
+  runnable: "可运行模型",
+  reproduced: "可复现实验",
+};
+const sourceKindLabels: Record<string, string> = {
+  paper: "论文",
+  specification: "规范",
+  documentation: "文档",
+  article: "文章",
+  repository: "代码仓库",
+};
 ---
 
 <BaseLayout
   title={pageTitle}
-  description={post?.description ?? modulePosts[0]?.description}
+  description={post?.description ?? moduleDescription}
+  type={post ? "article" : "website"}
+  publishedTime={post?.date}
+  modifiedTime={post?.updated ?? post?.verifiedAt}
 >
+  <Fragment slot="head">
+    <link rel="stylesheet" href={newsreaderCssUrl} media="print" data-async-css />
+    <link rel="stylesheet" href={katexCssUrl} media="print" data-async-css />
+    <noscript><link rel="stylesheet" href={newsreaderCssUrl} /></noscript>
+    <noscript><link rel="stylesheet" href={katexCssUrl} /></noscript>
+  </Fragment>
   {
     post && renderedContent ? (
-      <article class="shell article-page">
-        <header class="article-head">
+      <article class="article-page">
+        <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+        <header class="article-hero shell">
           <nav class="crumbs" aria-label="面包屑">
             <a href="/">首页</a>
             <span aria-hidden="true">/</span>
@@ -118,103 +158,218 @@ const listingDirs = props.kind === "dir" ? props.dirPath.split("/") : [];
             {breadcrumb.map((segment, index) => (
               <>
                 <span aria-hidden="true">/</span>
-                <a
-                  href={`/${post.domain}/${breadcrumb.slice(0, index + 1).join("/")}/`}
-                >
+                <a href={`/${post.domain}/${breadcrumb.slice(0, index + 1).join("/")}/`}>
                   {humanizeCategorySegment(segment)}
                 </a>
               </>
             ))}
           </nav>
-          <h1>{post.title}</h1>
-          <p class="article-lead">{post.description}</p>
-          <div class="article-meta">
-            <time datetime={post.date.toISOString()}>
-              {formatDate(post.date)}
-            </time>
-            {post.updated && (
-              <span>
-                更新于 {formatDate(post.updated)}
-              </span>
-            )}
-            <span>{getReadingMinutes(post.body)} 分钟阅读</span>
-          </div>
-          {post.tags.length > 0 && (
-            <div class="tag-row">
-              {post.tags.map((tag) => (
-                <a class="chip" href={`/tags/${encodeURIComponent(tag)}/`}>
-                  #{tag}
-                </a>
-              ))}
+
+          <div class="article-hero__grid">
+            <div class="article-hero__main">
+              <div class="article-labels">
+                <span class:list={["article-kind", post.domain === "embedded" ? "is-silicon" : ""]}>
+                  {kindLabels[post.kind] ?? "工程笔记"}
+                </span>
+                {post.maturity && <span>{maturityLabels[post.maturity]}</span>}
+                {post.evidence?.level && (
+                  <span>{evidenceLabels[post.evidence.level] ?? post.evidence.level}</span>
+                )}
+                {frontierTopic && (
+                  <a href={`/frontier/${frontierTopic.id}/`}>主题雷达</a>
+                )}
+              </div>
+              <h1>{post.title}</h1>
+              <p class="article-deck">{post.description}</p>
+              <div class="article-byline">
+                <span>{site.author.name}</span>
+                <time datetime={post.date.toISOString()}>{formatDate(post.date)}</time>
+                <span>{getReadingMinutes(post.body)} 分钟阅读</span>
+                {post.verifiedAt && (
+                  <span>核验于 {formatDate(post.verifiedAt)}</span>
+                )}
+              </div>
+              <div class="article-tags">
+                {post.tags.map((tag) => (
+                  <a class="chip" href={`/tags/${encodeURIComponent(tag)}/`}>#{tag}</a>
+                ))}
+              </div>
             </div>
-          )}
+
+            <aside class="article-brief" aria-label="研究摘要">
+              <span>研究摘要</span>
+              {post.question ? (
+                <div>
+                  <small>核心问题</small>
+                  <p>{post.question}</p>
+                </div>
+              ) : (
+                <div>
+                  <small>阅读目标</small>
+                  <p>{post.description}</p>
+                </div>
+              )}
+              {post.conclusion && (
+                <div>
+                  <small>主要结论</small>
+                  <p>{post.conclusion}</p>
+                </div>
+              )}
+              {post.takeaways.length > 0 && (
+                <ul>
+                  {post.takeaways.slice(0, 4).map((item) => <li>{item}</li>)}
+                </ul>
+              )}
+            </aside>
+          </div>
         </header>
 
-        <div class="article-layout">
-          {
-            tocItems.length > 0 && (
-              <aside class="toc-wrap no-print" aria-label="目录">
-                <p class="eyebrow">目录</p>
+        <div class="article-shell shell">
+          <aside class="article-rail no-print" aria-label="文章目录">
+            <p>章节</p>
+            <nav>
+              {tocItems.map((heading) => (
+                <a
+                  class:list={["toc-link", heading.depth === 3 ? "toc-link--sub" : ""]}
+                  href={`#${heading.slug}`}
+                >
+                  {heading.text}
+                </a>
+              ))}
+            </nav>
+            <a class="rail-top" href="#top">回到顶部 ↑</a>
+          </aside>
+
+          <div class="article-main">
+            {tocItems.length > 0 && (
+              <details class="mobile-toc no-print">
+                <summary>展开文章目录</summary>
                 <nav>
                   {tocItems.map((heading) => (
                     <a
-                      class:list={[
-                        "toc-link",
-                        heading.depth === 3 ? "toc-link--sub" : "",
-                      ]}
+                      class:list={[heading.depth === 3 ? "toc-link--sub" : ""]}
                       href={`#${heading.slug}`}
                     >
                       {heading.text}
                     </a>
                   ))}
                 </nav>
+              </details>
+            )}
+
+            <div class="article surface" id="top" data-pagefind-body>
+              <div hidden>
+                <span data-pagefind-filter="domain">{post.domain}</span>
+                <span data-pagefind-filter="kind">{post.kind}</span>
+                <span data-pagefind-filter="year">{post.date.getFullYear()}</span>
+                {post.series && <span data-pagefind-filter="series">{post.series}</span>}
+                {post.tags.map((tag) => <span data-pagefind-filter="tag">{tag}</span>)}
+              </div>
+              <renderedContent.Content />
+            </div>
+
+            {frontierTopic && <TopicDiagram topicId={frontierTopic.id} compact />}
+            {articleLab && (
+              <aside class="lab-teaser" aria-labelledby="lab-teaser-title">
+                <p class="mono-label">Interactive model / 配套实验</p>
+                <h2 id="lab-teaser-title">{articleLab.title}</h2>
+                <p>{articleLab.staticConclusion}</p>
+                <a class="btn btn--embedded" href={`/lab/${articleLab.slug}/`}>打开参数实验</a>
+                <small>{articleLab.evidence}</small>
               </aside>
-            )
-          }
-          <div class="article surface">
-            <renderedContent.Content />
+            )}
+
+            {post.sources.length > 0 && (
+              <section class="source-section" aria-labelledby="sources-title">
+                <div class="source-section__head">
+                  <p>证据清单</p>
+                  <h2 id="sources-title">来源与适用范围</h2>
+                </div>
+                <ol class="source-list">
+                  {post.sources.map((source) => (
+                    <li>
+                      <span class="source-kind">{sourceKindLabels[source.kind] ?? source.kind}</span>
+                      <div>
+                        <a href={source.url} target="_blank" rel="noopener noreferrer">
+                          {source.title}
+                        </a>
+                        <p>
+                          {[source.authors, source.year].filter(Boolean).join(" · ")}
+                          {source.note ? ` ${source.note}` : ""}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+                {post.evidence?.scope && (
+                  <p class="source-scope">限定条件：{post.evidence.scope}</p>
+                )}
+              </section>
+            )}
+
+            <footer class="article-foot">
+              <div>
+                <p>本文遵循 {site.license.content}</p>
+                <p>站点代码采用 {site.license.code}。所有模拟结果都标注了假设，不替代目标环境实测。</p>
+              </div>
+              <a class="text-link" href="/archive/">继续阅读归档</a>
+            </footer>
+
+            {site.giscus.enabled && <Comments />}
           </div>
         </div>
 
-        <footer class="article-foot no-print">
-          <Comments />
-          <p class="article-license">
-            本文遵循 {site.license.content} · 源码见 GitHub 仓库
-          </p>
-        </footer>
+        {related.length > 0 && (
+          <section class="related-section shell" data-pagefind-ignore>
+            <header class="section-heading">
+              <div>
+                <p class="section-label">继续追踪</p>
+                <h2>沿着同一条证据链</h2>
+              </div>
+            </header>
+            <div class="related-grid">
+              {related.map((item) => <ArticleCard post={item} />)}
+            </div>
+          </section>
+        )}
       </article>
       <script is:inline src="/scripts/article.js" defer></script>
     ) : (
-      <div class="shell page-wrap">
-        {listingModuleKey && (
+      <div class="domain-page shell">
+        <header class="domain-hero">
           <nav class="crumbs" aria-label="面包屑">
             <a href="/">首页</a>
             <span aria-hidden="true">/</span>
-            <a href={`/${listingModuleKey}/`}>{moduleTitle}</a>
-            {listingDirs.map((segment, index) => (
+            <a href={`/${props.kind === "module" || props.kind === "dir" ? props.moduleKey : ""}/`}>
+              {moduleTitle}
+            </a>
+            {breadcrumb.map((segment, index) => (
               <>
                 <span aria-hidden="true">/</span>
-                <a
-                  href={`/${listingModuleKey}/${listingDirs.slice(0, index + 1).join("/")}/`}
-                >
+                <a href={`/${props.kind === "dir" ? props.moduleKey : ""}/${breadcrumb.slice(0, index + 1).join("/")}/`}>
                   {humanizeCategorySegment(segment)}
                 </a>
               </>
             ))}
           </nav>
-        )}
-        <h1>{pageTitle}</h1>
-        {categoryTitle && (
-          <p class="muted">
-            {modulePosts.length} 篇 · {categoryTitle}
-          </p>
-        )}
+          <p class="section-label">{categoryTitle ? "子主题" : "内容域"}</p>
+          <h1>{pageTitle}</h1>
+          <p>{categoryTitle ? `该子主题下有 ${modulePosts.length} 篇笔记。` : moduleDescription}</p>
+          <div class="domain-stats">
+            <span><strong>{modulePosts.length}</strong> 篇公开内容</span>
+            <span><strong>{modulePosts.filter((item) => item.kind === "flagship").length}</strong> 篇旗舰研究</span>
+            <span><strong>{modulePosts.filter((item) => item.lab).length}</strong> 个可交互实验</span>
+          </div>
+        </header>
         {modulePosts.length > 0 ? (
-          <div class="domain-grid">
+          <div class="domain-list">
             {modulePosts.map((item) => <ArticleCard post={item} />)}
           </div>
         ) : (
-          <p class="muted">该内容域还没有公开文章。</p>
+          <div class="empty-state">
+            <p>该内容域还没有公开文章。</p>
+            <a href="/archive/">浏览全部归档</a>
+          </div>
         )}
       </div>
     )
@@ -223,142 +378,474 @@ const listingDirs = props.kind === "dir" ? props.dirPath.split("/") : [];
 
 <style is:global>
   .article-page {
-    padding-block: 2rem 1rem;
+    position: relative;
   }
 
-  .article-head {
-    max-width: 50rem;
-    margin-inline: auto;
-    margin-block-end: 2rem;
+  .article-hero {
+    padding-block: clamp(1.8rem, 4vw, 3rem) clamp(2rem, 5vw, 4rem);
+    border-block-end: 1px solid var(--line);
   }
 
   .crumbs {
     display: flex;
     flex-wrap: wrap;
     gap: 0.35rem;
-    font-size: 0.85rem;
-    color: var(--fg-faint);
-    margin-block-end: 1rem;
+    align-items: center;
+    color: var(--ink-faint);
+    font-size: 0.73rem;
   }
 
   .crumbs a {
-    color: var(--fg-soft);
+    color: var(--ink-soft);
     text-decoration: none;
   }
 
   .crumbs a:hover {
-    color: var(--accent);
+    color: var(--ai);
   }
 
-  .article-head h1 {
-    font-family: var(--font-display);
-    font-size: clamp(1.7rem, 4vw, 2.5rem);
-    line-height: 1.3;
-    margin: 0.3rem 0 0.7rem;
-    letter-spacing: -0.01em;
-  }
-
-  .article-lead {
-    color: var(--fg-soft);
-    font-size: 1.05rem;
-    margin-block-end: 1rem;
-  }
-
-  .article-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.7rem;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    color: var(--fg-faint);
-    margin-block-end: 0.7rem;
-  }
-
-  .tag-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-  }
-
-  .article-layout {
+  .article-hero__grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2rem;
-    align-items: start;
+    grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.55fr);
+    gap: clamp(2rem, 6vw, 5rem);
+    align-items: end;
+    margin-block-start: clamp(1.4rem, 4vw, 2.8rem);
   }
 
-  .article {
-    padding: clamp(1.1rem, 3vw, 2.2rem);
-    width: min(100%, var(--measure-wide));
-    margin-inline: auto;
+  .article-labels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.7rem;
+    align-items: center;
+    color: var(--ink-faint);
+    font: 500 0.69rem/1.5 var(--font-mono);
   }
 
-  .article-layout .article {
-    max-width: none;
+  .article-labels .article-kind {
+    color: var(--ai);
   }
 
-  .toc-wrap {
-    position: sticky;
-    top: 5.4rem;
-    max-height: calc(100vh - 7rem);
-    overflow: auto;
-    border-left: 1px solid var(--hairline);
+  .article-labels .article-kind.is-silicon {
+    color: var(--embedded);
+  }
+
+  .article-labels a {
+    color: var(--ink-soft);
+  }
+
+  .article-hero h1 {
+    max-width: 17ch;
+    margin: 0.75rem 0 0;
+    font-size: clamp(2.4rem, 5.4vw, 5.4rem);
+    font-weight: 600;
+    letter-spacing: -0.066em;
+    line-height: 0.98;
+    text-wrap: balance;
+  }
+
+  .article-deck {
+    max-width: 62ch;
+    margin: 1.15rem 0 0;
+    color: var(--ink-soft);
+    font-family: var(--font-reading);
+    font-size: clamp(1.05rem, 0.95rem + 0.35vw, 1.25rem);
+    line-height: 1.65;
+  }
+
+  .article-byline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.9rem;
+    margin-block-start: 1.1rem;
+    color: var(--ink-faint);
+    font: 500 0.7rem/1.5 var(--font-mono);
+  }
+
+  .article-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-block-start: 0.65rem;
+  }
+
+  .article-brief {
+    border-block-start: 2px solid var(--ai);
+    padding-block-start: 0.8rem;
+  }
+
+  .article-brief > span {
+    color: var(--ai);
+    font: 600 0.68rem/1.4 var(--font-mono);
+  }
+
+  .article-brief > div {
+    margin-block-start: 0.8rem;
+  }
+
+  .article-brief small {
+    color: var(--ink-faint);
+    font-size: 0.68rem;
+  }
+
+  .article-brief p {
+    margin: 0.2rem 0 0;
+    color: var(--ink);
+    font-size: 0.88rem;
+    line-height: 1.65;
+  }
+
+  .article-brief ul {
+    display: grid;
+    gap: 0.34rem;
+    margin: 1rem 0 0;
     padding-inline-start: 1rem;
-    display: none;
+    color: var(--ink-soft);
+    font-size: 0.76rem;
+    line-height: 1.55;
   }
 
-  .toc-wrap nav {
+  .article-brief li::marker {
+    color: var(--embedded);
+  }
+
+  .article-shell {
     display: grid;
-    gap: 0.25rem;
-    margin-block-start: 0.5rem;
+    grid-template-columns: 13rem minmax(0, 1fr);
+    gap: clamp(2rem, 5vw, 5rem);
+    align-items: start;
+    padding-block-start: clamp(2rem, 5vw, 3.5rem);
+  }
+
+  .article-rail {
+    position: sticky;
+    inset-block-start: calc(var(--header-height) + 1.5rem);
+    display: grid;
+    gap: 0.7rem;
+    max-height: calc(100vh - var(--header-height) - 3rem);
+    overflow: auto;
+    border-inline-start: 1px solid var(--line);
+    padding-inline-start: 1rem;
+  }
+
+  .article-rail p {
+    margin: 0;
+    color: var(--ink-faint);
+    font: 600 0.68rem/1.4 var(--font-mono);
+  }
+
+  .article-rail nav {
+    display: grid;
+    gap: 0.28rem;
+  }
+
+  .toc-link,
+  .rail-top {
+    color: var(--ink-faint);
+    font-size: 0.73rem;
+    line-height: 1.42;
+    text-decoration: none;
   }
 
   .toc-link {
-    color: var(--fg-soft);
-    font-size: 0.86rem;
-    text-decoration: none;
-    line-height: 1.4;
+    display: flex;
+    min-height: 2rem;
+    align-items: center;
+    padding-block: 0.25rem;
   }
 
-  .toc-link:hover {
-    color: var(--accent);
+  .toc-link:hover,
+  .toc-link.is-active,
+  .rail-top:hover {
+    color: var(--ink);
   }
 
   .toc-link--sub {
-    padding-inline-start: 0.9rem;
-    font-size: 0.8rem;
-    color: var(--fg-faint);
+    padding-inline-start: 0.75rem;
+    font-size: 0.69rem;
   }
 
-  .domain-grid {
+  .rail-top {
+    margin-block-start: 0.7rem;
+    border-block-start: 1px solid var(--line);
+    padding-block-start: 0.7rem;
+  }
+
+  .article-main {
+    min-width: 0;
+    max-width: 54rem;
+  }
+
+  .article {
+    padding: clamp(1.2rem, 4vw, 3.4rem);
+  }
+
+  .mobile-toc {
+    display: none;
+    margin-block-end: 1rem;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    padding: 0.7rem 0.85rem;
+  }
+
+  .mobile-toc summary {
+    color: var(--ink);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .mobile-toc nav {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr));
-    gap: 0.9rem;
-    margin-block-start: 1.4rem;
+    gap: 0.35rem;
+    margin-block-start: 0.6rem;
+    border-block-start: 1px solid var(--line);
+    padding-block-start: 0.6rem;
+  }
+
+  .mobile-toc a {
+    color: var(--ink-soft);
+    font-size: 0.75rem;
+    text-decoration: none;
+  }
+
+  .source-section {
+    margin-block-start: 2.5rem;
+    border-block-start: 2px solid var(--ink);
+    padding-block-start: 1rem;
+  }
+
+  .lab-teaser {
+    display: grid;
+    gap: 0.6rem;
+    margin-block-start: 2.5rem;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    padding: 1rem;
+    font-family: var(--font-ui);
+  }
+
+  .lab-teaser h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 620;
+  }
+
+  .lab-teaser p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-family: var(--font-ui);
+    font-size: 0.83rem;
+  }
+
+  .lab-teaser .btn {
+    justify-self: start;
+  }
+
+  .lab-teaser small {
+    color: var(--ink-faint);
+    font: 0.65rem/1.5 var(--font-mono);
+  }
+
+  .source-section__head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-block-end: 0.8rem;
+  }
+
+  .source-section__head p {
+    margin: 0;
+    color: var(--embedded);
+    font: 600 0.68rem/1.4 var(--font-mono);
+  }
+
+  .source-section__head h2 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 620;
+  }
+
+  .source-list {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .source-list li {
+    display: grid;
+    grid-template-columns: 5.3rem minmax(0, 1fr);
+    gap: 1rem;
+    border-block-end: 1px solid var(--line);
+    padding-block: 0.72rem;
+  }
+
+  .source-kind {
+    color: var(--ink-faint);
+    font: 500 0.66rem/1.5 var(--font-mono);
+  }
+
+  .source-list a {
+    color: var(--ink);
+    font-size: 0.84rem;
+    font-weight: 580;
+  }
+
+  .source-list p {
+    margin: 0.2rem 0 0;
+    color: var(--ink-faint);
+    font-size: 0.68rem;
+    line-height: 1.55;
+  }
+
+  .source-scope {
+    margin: 0.85rem 0 0;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    padding: 0.65rem 0.8rem;
+    color: var(--ink-soft);
+    font-size: 0.72rem;
+    line-height: 1.6;
   }
 
   .article-foot {
-    max-width: 50rem;
-    margin: 2.5rem auto 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-block-start: 2.4rem;
+    border-block-start: 1px solid var(--line);
+    padding-block-start: 1rem;
   }
 
-  .article-license {
-    color: var(--fg-faint);
-    font-size: 0.8rem;
-    border-top: 1px solid var(--hairline);
-    padding-top: 1rem;
-    margin-top: 2rem;
+  .article-foot div {
+    display: grid;
+    gap: 0.22rem;
   }
 
-  @media (min-width: 1024px) {
-    .article-layout {
-      grid-template-columns: minmax(0, 12rem) minmax(0, 1fr);
+  .article-foot p {
+    margin: 0;
+    color: var(--ink-faint);
+    font-family: var(--font-ui);
+    font-size: 0.68rem;
+    line-height: 1.55;
+  }
+
+  .related-section {
+    padding-block-start: clamp(3rem, 7vw, 6rem);
+  }
+
+  .related-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.2rem;
+  }
+
+  .domain-page {
+    padding-block: clamp(2.2rem, 6vw, 5rem) 0;
+  }
+
+  .domain-hero {
+    max-width: 62rem;
+    border-block-end: 1px solid var(--line);
+    padding-block-end: clamp(1.5rem, 4vw, 2.5rem);
+  }
+
+  .domain-hero h1 {
+    max-width: 16ch;
+    margin: 0.6rem 0 0;
+    font-size: clamp(2.5rem, 7vw, 6rem);
+    font-weight: 610;
+    letter-spacing: -0.07em;
+    line-height: 0.94;
+  }
+
+  .domain-hero > p:not(.section-label) {
+    max-width: 48rem;
+    margin: 1rem 0 0;
+    color: var(--ink-soft);
+    font-family: var(--font-reading);
+    font-size: 1.08rem;
+    line-height: 1.7;
+  }
+
+  .domain-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin-block-start: 1.1rem;
+    color: var(--ink-faint);
+    font-size: 0.72rem;
+  }
+
+  .domain-stats strong {
+    color: var(--ink);
+    font-family: var(--font-mono);
+  }
+
+  .domain-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 2rem;
+    margin-block-start: 1.5rem;
+  }
+
+  @media (max-width: 1000px) {
+    .article-hero__grid {
+      grid-template-columns: 1fr;
     }
-    .toc-wrap {
+
+    .article-brief {
+      max-width: 42rem;
+    }
+
+    .article-shell {
+      grid-template-columns: 1fr;
+    }
+
+    .article-rail {
+      display: none;
+    }
+
+    .mobile-toc {
       display: block;
     }
-    .article-layout .article {
-      grid-column: 2;
+
+    .related-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .article-hero h1 {
+      font-size: clamp(2.3rem, 12vw, 3.8rem);
+    }
+
+    .article {
+      padding: 1.1rem;
+    }
+
+    .source-section__head {
+      align-items: start;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .source-list li {
+      grid-template-columns: 1fr;
+      gap: 0.2rem;
+    }
+
+    .article-foot {
+      align-items: start;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .related-grid,
+    .domain-list {
+      grid-template-columns: 1fr;
     }
   }
 </style>

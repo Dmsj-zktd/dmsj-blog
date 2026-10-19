@@ -1,22 +1,28 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { ui } from "@/i18n/zh-CN";
 import { collectTags } from "@/lib/posts";
 
 const tags = await collectTags();
+const maxCount = Math.max(...tags.map((tag) => tag.count), 1);
 ---
 
-<BaseLayout title={ui.tags.title}>
-  <div class="shell page-wrap">
-    <h1>{ui.tags.title}</h1>
+<BaseLayout title="标签索引 · DMSJ Signal Lab" description="从技术标签进入 DMSJ 的研究笔记。">
+  <header class="shell page-hero">
+    <p class="mono-label">Tag index / concept routes</p>
+    <h1>从关键词进入知识网络。</h1>
+    <p class="page-hero__lead">标签不是装饰，而是跨内容域寻找同一约束的捷径。</p>
+  </header>
+
+  <div class="shell section">
     {tags.length === 0 ? (
-      <p class="muted">{ui.tags.empty}</p>
+      <p class="empty-state">尚无标签。</p>
     ) : (
-      <div class="tag-cloud">
+      <div class="tag-grid">
         {tags.map(({ tag, count }) => (
-          <a class="chip" href={`/tags/${encodeURIComponent(tag)}/`}>
-            #{tag}
-            <span class="tag-count">{count}</span>
+          <a href={`/tags/${encodeURIComponent(tag)}/`}>
+            <span>#{tag}</span>
+            <i style={`--w:${Math.max(12, (count / maxCount) * 100)}%`}></i>
+            <small>{count} notes</small>
           </a>
         ))}
       </div>
@@ -24,16 +30,55 @@ const tags = await collectTags();
   </div>
 </BaseLayout>
 
-<style is:global>
-  .tag-cloud {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-block-start: 1.5rem;
+<style>
+  .tag-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-block-start: 1px solid var(--line);
+    border-inline-start: 1px solid var(--line);
   }
 
-  .tag-count {
-    opacity: 0.75;
-    margin-inline-start: 0.25rem;
+  .tag-grid a {
+    display: grid;
+    min-height: 8rem;
+    align-content: space-between;
+    border-block-end: 1px solid var(--line);
+    border-inline-end: 1px solid var(--line);
+    color: var(--ink);
+    padding: 0.9rem;
+    text-decoration: none;
+  }
+
+  .tag-grid a:hover {
+    background: var(--ai-soft);
+  }
+
+  .tag-grid span {
+    font-size: 1rem;
+    font-weight: 580;
+  }
+
+  .tag-grid i {
+    width: var(--w);
+    height: 3px;
+    margin-block: 1.2rem 0.5rem;
+    background: linear-gradient(90deg, var(--ai), var(--embedded));
+  }
+
+  .tag-grid small {
+    color: var(--ink-faint);
+    font: 0.61rem var(--font-mono);
+  }
+
+  @media (max-width: 800px) {
+    .tag-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 440px) {
+    .tag-grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>

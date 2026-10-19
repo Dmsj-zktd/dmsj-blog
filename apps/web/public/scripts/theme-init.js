@@ -1,24 +1,29 @@
 (function () {
   "use strict";
-  var THEME_KEY = "dmsj-theme";
-  var MODE_KEY = "dmsj-mode";
-  var themes = ["paper", "gothic", "blueprint", "telegraph", "terminal"];
-  var qs = new URLSearchParams(location.search);
-  var savedTheme = localStorage.getItem(THEME_KEY);
-  var theme = qs.get("theme") || savedTheme;
-  if (!theme || themes.indexOf(theme) === -1) {
-    theme = themes[Math.floor(Math.random() * themes.length)];
-  }
-  var savedMode = localStorage.getItem(MODE_KEY);
-  var mode = qs.get("mode") || savedMode;
-  if (mode !== "light" && mode !== "dark") {
-    mode = window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  }
   var root = document.documentElement;
-  root.setAttribute("data-theme", theme);
-  root.setAttribute("data-mode", mode);
-  root.style.colorScheme = mode;
+  var appearance = "auto";
+  var contrast = "normal";
+
+  try {
+    var savedAppearance = localStorage.getItem("dmsj-appearance");
+    if (savedAppearance === "light" || savedAppearance === "dark" || savedAppearance === "auto") {
+      appearance = savedAppearance;
+    }
+    if (localStorage.getItem("dmsj-contrast") === "high") contrast = "high";
+  } catch {
+    // Storage can be unavailable in privacy-focused or embedded contexts.
+  }
+
+  root.setAttribute("data-theme", appearance);
+  root.setAttribute("data-contrast", contrast);
+  try {
+    var lens = new URLSearchParams(location.search).get("lens") ||
+      localStorage.getItem("dmsj-lens") ||
+      "builder";
+    if (lens !== "builder" && lens !== "hiring" && lens !== "explorer") lens = "builder";
+    root.setAttribute("data-lens", lens);
+  } catch {
+    root.setAttribute("data-lens", "builder");
+  }
+  root.setAttribute("data-js", "true");
 })();

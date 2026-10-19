@@ -1,5 +1,6 @@
 import type { CollectionEntry } from "astro:content";
 import { getCollection } from "astro:content";
+import type { ContentKind, Evidence, Maturity, SourceRef } from "@dmsj/content-model";
 
 import { type ContentModule, getModule } from "@/site/content-registry";
 
@@ -16,10 +17,22 @@ export interface PostSummary {
   updated?: Date;
   tags: string[];
   series?: string;
+  seriesOrder?: number;
   draft: boolean;
   featured?: boolean;
   sticky?: boolean;
   lang?: string;
+  kind: ContentKind;
+  topic?: string;
+  maturity?: Maturity;
+  sources: SourceRef[];
+  evidence?: Evidence;
+  lab?: string;
+  related: string[];
+  verifiedAt?: Date;
+  question?: string;
+  conclusion?: string;
+  takeaways: string[];
   body: string;
 }
 
@@ -41,10 +54,22 @@ function toPost(entry: BlogEntry): PostSummary | undefined {
     updated: entry.data.updated,
     tags: entry.data.tags ?? [],
     series: entry.data.series,
+    seriesOrder: entry.data.seriesOrder,
     draft: entry.data.draft,
     featured: entry.data.featured,
     sticky: entry.data.sticky,
     lang: entry.data.lang,
+    kind: entry.data.kind,
+    topic: entry.data.topic,
+    maturity: entry.data.maturity,
+    sources: entry.data.sources ?? [],
+    evidence: entry.data.evidence,
+    lab: entry.data.lab,
+    related: entry.data.related ?? [],
+    verifiedAt: entry.data.verifiedAt,
+    question: entry.data.question,
+    conclusion: entry.data.conclusion,
+    takeaways: entry.data.takeaways ?? [],
     body: entry.body ?? "",
   };
 }
@@ -62,6 +87,58 @@ export async function getPublishedPosts(): Promise<PostSummary[]> {
 export async function getPostsByDomain(domain: string): Promise<PostSummary[]> {
   const all = await getAllPosts();
   return all.filter((p) => p.domain === domain && !p.draft);
+}
+
+export async function getPostsByTopic(topic: string): Promise<PostSummary[]> {
+  return (await getPublishedPosts()).filter((post) => post.topic === topic);
+}
+
+export function findPostByRoute(posts: PostSummary[], route: string): PostSummary | undefined {
+  const normalized = route
+    .replace(/^\/+/, "")
+    .replace(/^content\//, "")
+    .replace(/\.mdx?$/, "")
+    .replace(/\/+$/, "");
+  return posts.find((post) => post.id === normalized);
+}
+
+export function isResearchPost(post: PostSummary): boolean {
+  return (
+    Boolean(post.topic) ||
+    post.kind === "flagship" ||
+    post.kind === "lab" ||
+    post.kind === "synthesis"
+  );
+}
+
+export async function getPostsForTopic(_topic: string, paths: string[]): Promise<PostSummary[]> {
+  const posts = await getPublishedPosts();
+  return paths
+    .map((path) => posts.find((post) => post.id === path))
+    .filter((post): post is PostSummary => Boolean(post));
+}
+
+export async function getRelatedPosts(post: PostSummary, limit = 3): Promise<PostSummary[]> {
+  const posts = await getPublishedPosts();
+  const explicit = post.related
+    .map((id) => posts.find((candidate) => candidate.id === id))
+    .filter((candidate): candidate is PostSummary => Boolean(candidate));
+  const topicMatches = post.topic
+    ? posts.filter(
+        (candidate) =>
+          candidate.id !== post.id &&
+          candidate.topic === post.topic &&
+          !explicit.some((item) => item.id === candidate.id),
+      )
+    : [];
+  const tagMatches = posts.filter(
+    (candidate) =>
+      candidate.id !== post.id &&
+      candidate.tags.some((tag) => post.tags.includes(tag)) &&
+      !explicit.some((item) => item.id === candidate.id) &&
+      !topicMatches.some((item) => item.id === candidate.id),
+  );
+  return [...explicit, ...topicMatches, ...tagMatches].slice(0, limit);
 }
 
 export async function getPostByPath(

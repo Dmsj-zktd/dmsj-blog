@@ -1,59 +1,63 @@
 ---
-import { siGitee, siGithub } from "simple-icons";
-
 import { site } from "@/config/site";
 
-const icons = {
-  github: siGithub,
-  gitee: siGitee,
-} as const;
+interface Props {
+  compact?: boolean;
+}
+
+const { compact = false } = Astro.props;
 ---
 
-<ul class="social-list" aria-label="个人主页">
-  {site.author.social.map((item) => (
-    <li>
-      <a class="social-link" href={item.url} target="_blank" rel="noopener noreferrer">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
-          <path d={icons[item.id].path} />
-        </svg>
-        <span>{item.label}</span>
-      </a>
-    </li>
-  ))}
+<ul class:list={["social-links", compact && "social-links--compact"]} aria-label="个人主页">
+  {
+    site.author.social.map((link) => (
+      <li>
+        <a class="social-link" href={link.url} rel="me noreferrer">
+          <span aria-hidden="true">{link.id === "github" ? "GH" : "GE"}</span>
+          {!compact && <span>{link.label}</span>}
+        </a>
+      </li>
+    ))
+  }
 </ul>
 
-<style is:global>
-  .social-list {
+<style>
+  .social-links {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.6rem;
-    list-style: none;
+    gap: 0.45rem;
+    margin: 1.1rem 0 0;
     padding: 0;
-    margin: 1.2rem 0 0;
+    list-style: none;
   }
 
   .social-link {
     display: inline-flex;
+    min-height: 2.6rem;
     align-items: center;
-    gap: 0.4rem;
-    border: 1px solid var(--hairline);
-    background: var(--bg-elev);
+    gap: 0.45rem;
+    border: 1px solid var(--line);
     border-radius: 999px;
-    padding: 0.35rem 0.85rem;
-    color: var(--fg);
+    background: var(--surface);
+    color: var(--ink);
+    padding: 0.3rem 0.7rem;
+    font-size: 0.78rem;
     text-decoration: none;
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    transition: border-color 140ms ease, color 140ms ease, transform 140ms ease;
+  }
+
+  .social-link span:first-child {
+    color: var(--ink-faint);
+    font: 0.63rem var(--font-mono);
   }
 
   .social-link:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    transform: translateY(-1px);
+    border-color: var(--ink);
+    text-decoration: none;
   }
 
-  .social-link:active {
-    transform: translateY(0) scale(0.98);
+  .social-links--compact .social-link {
+    min-width: 2.6rem;
+    justify-content: center;
+    padding-inline: 0.5rem;
   }
 </style>

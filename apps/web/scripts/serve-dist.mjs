@@ -1,12 +1,14 @@
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
-import { extname, join, normalize } from "node:path";
+import { extname, resolve, sep } from "node:path";
+import { brotliCompressSync, gzipSync } from "node:zlib";
 
 const args = process.argv.slice(2);
 const portArg = args.findIndex((arg) => arg === "--port");
 const dirArg = args.findIndex((arg) => arg === "--dir");
-const root = normalize(dirArg >= 0 ? args[dirArg + 1] : "dist");
+const root = resolve(dirArg >= 0 ? args[dirArg + 1] : "dist");
 const port = Number(portArg >= 0 ? args[portArg + 1] : 4322);
+const compressible = new Set([".html", ".js", ".css", ".json", ".svg", ".xml", ".txt"]);
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -22,10 +24,14 @@ const types = {
 };
 
 function targetPath(pathname) {
-  let path = pathname === "/" ? "/index.html" : pathname;
+  let path = pathname.replace(/^\/+/, "") || "index.html";
   if (path.endsWith("/")) path += "index.html";
   if (!extname(path)) path += ".html";
-  return join(root, path);
+  const filePath = resolve(root, path);
+  if (filePath !== root && !filePath.startsWith(`${root}${sep}`)) {
+    throw new Error("path outside output directory");
+  }
+  return filePath;
 }
 
 createServer(async (req, res) => {
@@ -35,9 +41,31 @@ createServer(async (req, res) => {
     const meta = await stat(filePath);
     if (!meta.isFile()) throw new Error("not a file");
     const body = await readFile(filePath);
-    const type = types[extname(filePath)] ?? "application/octet-stream";
-    res.writeHead(200, { "Content-Type": type });
-    res.end(body);
+    const extension = extname(filePath);
+    const type = types[extension] ?? "application/octet-stream";
+    const headers = {
+      "Content-Type": type,
+      "X-Content-Type-Options": "nosniff",
+      "Cache-Control":
+        pathname.startsWith("/_astro/") || pathname.startsWith("/pagefind/")
+          ? "public, max-age=31536000, immutable"
+          : "no-cache",
+      Vary: "Accept-Encoding",
+    };
+    let payload = body;
+    if (body.length > 1024 && compressible.has(extension)) {
+      const accepted = String(req.headers["accept-encoding"] ?? "");
+      if (accepted.includes("br")) {
+        payload = brotliCompressSync(body);
+        headers["Content-Encoding"] = "br";
+      } else if (accepted.includes("gzip")) {
+        payload = gzipSync(body);
+        headers["Content-Encoding"] = "gzip";
+      }
+    }
+    headers["Content-Length"] = String(payload.length);
+    res.writeHead(200, headers);
+    res.end(payload);
   } catch {
     res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
     res.end("Not found");

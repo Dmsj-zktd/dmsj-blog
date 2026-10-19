@@ -1,88 +1,206 @@
 ---
 import type { PostSummary } from "@/lib/posts";
-import { moduleOfPost } from "@/lib/posts";
-import { formatDate, getReadingMinutes } from "@/lib/posts";
+import { formatDate, getReadingMinutes, moduleOfPost } from "@/lib/posts";
 
 interface Props {
   post: PostSummary;
   showExcerpt?: boolean;
+  featured?: boolean;
+  index?: number;
 }
 
-const { post, showExcerpt = true } = Astro.props;
+const { post, showExcerpt = true, featured = false, index } = Astro.props;
 const module = moduleOfPost(post);
+const isSilicon = post.domain === "embedded";
+const kindLabels = {
+  note: "笔记",
+  lab: "实验",
+  synthesis: "综合研究",
+  essay: "随笔",
+  project: "项目",
+  flagship: "旗舰研究",
+  experiment: "实验笔记",
+} as const;
 ---
 
-<article class="card surface">
-  <div class="card-meta">
-    {module && <a class="chip" href={`/${module.key}/`}>{module.label}</a>}
-    <time datetime={post.date.toISOString()}>{formatDate(post.date)}</time>
-    <span aria-hidden="true">·</span>
-    <span>{getReadingMinutes(post.body)} 分钟</span>
+<article
+  class:list={[
+    "article-card",
+    isSilicon ? "article-card--silicon" : "article-card--reasoning",
+    featured ? "article-card--featured" : "",
+  ]}
+>
+  <div class="article-card__rail" aria-hidden="true">
+    <span></span>
+    <i></i>
   </div>
-  <h3 class="card-title">
-    <a href={post.urlPath}>{post.title}</a>
-  </h3>
-  {showExcerpt && <p class="card-excerpt">{post.description}</p>}
-  <div class="card-foot">
-    {post.tags.slice(0, 4).map((tag) => (
-      <a class="chip" href={`/tags/${encodeURIComponent(tag)}/`}>#{tag}</a>
-    ))}
+  <div class="article-card__body">
+    <div class="article-card__meta">
+      {typeof index === "number" && <span>{String(index + 1).padStart(2, "0")}</span>}
+      <span class="article-card__kind">{kindLabels[post.kind] ?? "笔记"}</span>
+      {module && <span>{module.label}</span>}
+      <time datetime={post.date.toISOString()}>{formatDate(post.date)}</time>
+      <span>{getReadingMinutes(post.body)} 分钟</span>
+    </div>
+    <h2 class="article-card__title">
+      <a href={post.urlPath}>{post.title}</a>
+    </h2>
+    {showExcerpt && <p class="article-card__excerpt">{post.description}</p>}
+    <div class="article-card__foot">
+      <div class="article-card__tags">
+        {post.tags.slice(0, 3).map((tag) => <span>{tag}</span>)}
+      </div>
+      <span class="article-card__open" aria-hidden="true">
+        <span aria-hidden="true">阅读</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 12h13M13 6l6 6-6 6"></path>
+        </svg>
+      </span>
+    </div>
   </div>
 </article>
 
 <style is:global>
-  .card {
-    padding: 1.1rem 1.25rem;
-    display: block;
-    transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+  .article-card {
+    --card-accent: var(--ai);
+    position: relative;
+    display: grid;
+    grid-template-columns: 0.75rem minmax(0, 1fr);
+    gap: 0.9rem;
+    border-block-end: 1px solid var(--line);
+    background: transparent;
+    padding-block: 1.15rem;
+    transition: background-color 180ms ease;
   }
 
-  .card:hover {
-    transform: translateY(-1px);
-    border-color: var(--accent);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05), 0 14px 34px rgba(0, 0, 0, 0.08);
+  .article-card--silicon {
+    --card-accent: var(--embedded);
   }
 
-  .card-meta {
+  .article-card:hover {
+    background: color-mix(in srgb, var(--surface) 62%, transparent);
+  }
+
+  .article-card__rail {
+    display: grid;
+    grid-template-rows: 0.38rem 1fr;
+    justify-items: center;
+    gap: 0.35rem;
+    padding-block-start: 0.44rem;
+  }
+
+  .article-card__rail span {
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 999px;
+    background: var(--card-accent);
+  }
+
+  .article-card__rail i {
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(var(--card-accent), transparent);
+    opacity: 0.45;
+  }
+
+  .article-card__body {
+    min-width: 0;
+  }
+
+  .article-card__meta {
     display: flex;
-    align-items: center;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    font-family: var(--font-mono);
-    font-size: 0.76rem;
-    color: var(--fg-faint);
+    gap: 0.28rem 0.65rem;
+    align-items: center;
+    color: var(--ink-faint);
+    font: 500 0.68rem/1.5 var(--font-mono);
   }
 
-  .card-title {
-    margin: 0.55rem 0 0.35rem;
-    font-size: 1.15rem;
-    line-height: 1.4;
-    font-weight: 680;
+  .article-card__kind {
+    color: var(--card-accent);
   }
 
-  .card-title a {
-    color: var(--fg);
+  .article-card__title {
+    max-width: 36ch;
+    margin: 0.28rem 0 0;
+    font-size: clamp(1.12rem, 1rem + 0.5vw, 1.55rem);
+    font-weight: 630;
+    letter-spacing: -0.028em;
+    line-height: 1.24;
+  }
+
+  .article-card__title a {
+    color: var(--ink);
     text-decoration: none;
   }
 
-  .card-title a:hover {
-    color: var(--accent);
+  .article-card__title a::after {
+    position: absolute;
+    inset: 0;
+    content: "";
   }
 
-  .card-excerpt {
-    margin: 0 0 0.75rem;
-    color: var(--fg-soft);
-    font-size: 0.93rem;
-    line-height: 1.7;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+  .article-card__excerpt {
+    max-width: 58ch;
+    margin: 0.42rem 0 0;
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+    line-height: 1.65;
   }
 
-  .card-foot {
+  .article-card__foot {
+    display: flex;
+    min-height: 1.8rem;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-block-start: 0.45rem;
+  }
+
+  .article-card__tags {
     display: flex;
     flex-wrap: wrap;
     gap: 0.35rem;
+    color: var(--ink-faint);
+    font-size: 0.7rem;
+  }
+
+  .article-card__tags span::before {
+    content: "#";
+  }
+
+  .article-card__open {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--ink-soft);
+    font-size: 0.76rem;
+    text-decoration: none;
+  }
+
+  .article-card__open svg {
+    width: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.6;
+    transition: transform 160ms var(--ease-out);
+  }
+
+  .article-card:hover .article-card__open svg {
+    transform: translateX(0.2rem);
+  }
+
+  .article-card--featured {
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    padding: 1.3rem 1.2rem;
+  }
+
+  .article-card--featured .article-card__title {
+    font-size: clamp(1.35rem, 1.1rem + 1vw, 2rem);
   }
 </style>

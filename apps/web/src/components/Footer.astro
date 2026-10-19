@@ -1,48 +1,157 @@
 ---
 import { site } from "@/config/site";
+import { contentModules } from "@/site/content-registry";
+
+const year = new Date().getFullYear();
+const modules = contentModules.filter((module) => module.public);
 ---
 
 <footer class="site-footer no-print">
-  <div class="shell footer-inner">
-    <p class="footer-note">
-      © {new Date().getFullYear()} {site.author.name} · {site.license.content} · 代码 {site.license.code}
-    </p>
-    <p class="footer-meta">
+  <div class="shell footer-grid">
+    <div class="footer-brand">
+      <a class="footer-wordmark" href="/">DMSJ <span>Signal Lab</span></a>
+      <p>{site.tagline}</p>
+      <p class="footer-fine">
+        © {year} {site.author.name}。文章 {site.license.content}，代码 {site.license.code}。
+      </p>
+    </div>
+
+    <nav class="footer-column" aria-label="内容导航">
+      <p class="footer-heading">阅读</p>
+      <a href="/frontier/">前沿雷达</a>
+      <a href="/archive/">全部笔记</a>
+      <a href="/lab/">解释实验</a>
+      <a href="/tags/">标签索引</a>
+    </nav>
+
+    <nav class="footer-column" aria-label="内容域">
+      <p class="footer-heading">内容域</p>
+      {modules.map((module) => <a href={`/${module.key}/`}>{module.label}</a>)}
+    </nav>
+
+    <div class="footer-column">
+      <p class="footer-heading">连接</p>
       {site.author.social.map((item) => (
-        <>
-          <a href={item.url} target="_blank" rel="noopener noreferrer">{item.label}</a>
-          <span aria-hidden="true">·</span>
-        </>
+        <a href={item.url} target="_blank" rel="noopener noreferrer">{item.label} ↗</a>
       ))}
       <a href="/rss.xml">RSS</a>
-      <span>Astro + Cloudflare</span>
-    </p>
+      <a href="/admin/">管理入口</a>
+    </div>
+  </div>
+  <div class="shell footer-base">
+    <span>Astro · Cloudflare Pages · Git-first publishing</span>
+    <a href="https://github.com/Dmsj-zktd/dmsj-blog" target="_blank" rel="noopener noreferrer">
+      查看源码
+    </a>
   </div>
 </footer>
 
 <style is:global>
   .site-footer {
-    margin-top: 5rem;
-    border-top: 1px solid var(--hairline);
-    color: var(--fg-faint);
+    margin-block-start: clamp(4rem, 10vw, 8rem);
+    border-block-start: 1px solid var(--line);
+    background: color-mix(in srgb, var(--surface) 54%, transparent);
   }
 
-  .footer-inner {
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1.5fr repeat(3, minmax(8rem, 0.75fr));
+    gap: clamp(1.5rem, 4vw, 4rem);
+    padding-block: clamp(2.2rem, 6vw, 4rem);
+  }
+
+  .footer-brand {
+    display: grid;
+    align-content: start;
+    gap: 0.65rem;
+  }
+
+  .footer-wordmark {
+    color: var(--ink);
+    font-size: 1.15rem;
+    font-weight: 750;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+  }
+
+  .footer-wordmark span {
+    color: var(--ink-faint);
+    font: 500 0.7rem/1.2 var(--font-mono);
+    letter-spacing: 0.04em;
+  }
+
+  .footer-brand p {
+    max-width: 28rem;
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+  }
+
+  .footer-brand .footer-fine {
+    color: var(--ink-faint);
+    font-size: 0.74rem;
+    line-height: 1.65;
+  }
+
+  .footer-column {
+    display: grid;
+    align-content: start;
+    gap: 0.42rem;
+  }
+
+  .footer-column a {
+    color: var(--ink-soft);
+    font-size: 0.83rem;
+    text-decoration: none;
+  }
+
+  .footer-column a:hover {
+    color: var(--ai);
+  }
+
+  .footer-heading {
+    margin: 0 0 0.22rem;
+    color: var(--ink);
+    font-size: 0.78rem;
+    font-weight: 650;
+  }
+
+  .footer-base {
     display: flex;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    padding-block: 1.6rem;
-    font-size: 0.85rem;
+    gap: 1rem;
+    border-block-start: 1px solid var(--line);
+    padding-block: 0.9rem;
+    color: var(--ink-faint);
+    font: 500 0.68rem/1.5 var(--font-mono);
   }
 
-  .footer-meta {
-    display: flex;
-    gap: 0.45rem;
-    margin: 0;
+  .footer-base a {
+    color: var(--ink-soft);
   }
 
-  .footer-note {
-    margin: 0;
+  @media (max-width: 800px) {
+    .footer-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .footer-brand {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .footer-column:last-child {
+      grid-column: 1 / -1;
+    }
+
+    .footer-base {
+      align-items: flex-start;
+      flex-direction: column;
+    }
   }
 </style>

@@ -5,6 +5,23 @@ date: 2026-09-01
 tags: ["Linux", "驱动", "regmap", "SPI"]
 lang: "zh-CN"
 draft: false
+kind: "note"
+maturity: "established"
+verifiedAt: 2026-10-18
+question: "regmap 抽象解决的是总线差异，还是寄存器访问语义？"
+conclusion: "regmap 把寄存器语义、缓存、锁与总线事务分离，让驱动逻辑不依赖 SPI/I2C 的物理实现。"
+takeaways:
+  - "业务代码应面向寄存器，而不是面向总线事务。"
+  - "缓存、位域更新和并发锁是抽象层的主要收益。"
+  - "复杂时序或非标准事务仍可能需要直接总线访问。"
+evidence:
+  level: "analyzed"
+  scope: "Linux regmap 接口与驱动模式分析。"
+sources:
+  - title: "Linux kernel regmap API documentation"
+    url: "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/linux/regmap.h"
+    year: 2026
+    kind: "documentation"
 ---
 
 写 Linux 驱动时，同样一份寄存器读写逻辑经常要在 SPI 和 I2C 之间复制。`regmap` 提供的是“寄存器语义”的统一接口：驱动关心寄存器编号与位域，底层的总线事务交给 regmap 完成。

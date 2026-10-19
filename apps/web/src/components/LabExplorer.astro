@@ -1,0 +1,425 @@
+---
+import { evaluateLab, type LabDefinition } from "@/lib/labs";
+
+interface Props {
+  lab: LabDefinition;
+}
+
+const { lab } = Astro.props;
+const defaults = Object.fromEntries(lab.fields.map((field) => [field.id, field.value]));
+const initial = evaluateLab(lab.slug, defaults);
+---
+
+<section class="lab-explorer" data-lab-explorer data-lab-slug={lab.slug} aria-labelledby={`${lab.slug}-title`}>
+  <div class="lab-explorer__head">
+    <div>
+      <p class="mono-label">Interactive model / software simulation</p>
+      <h2 id={`${lab.slug}-title`}>{lab.title}</h2>
+      <p>{lab.description}</p>
+    </div>
+    <span class="lab-explorer__status">LOCAL MODEL</span>
+  </div>
+
+  <div class="lab-explorer__grid">
+    <form class="lab-controls" data-lab-form>
+      {
+        lab.fields.map((field) => (
+          <div class="lab-field">
+            <div class="lab-field__head">
+              <label for={`${lab.slug}-${field.id}`}>{field.label}</label>
+              <span>{field.hint}</span>
+            </div>
+            <div class="lab-field__input">
+              <input
+                id={`${lab.slug}-${field.id}`}
+                type="range"
+                min={field.min}
+                max={field.max}
+                step={field.step}
+                value={field.value}
+                data-lab-default={field.value}
+                data-lab-range={field.id}
+              />
+              <span class="lab-field__number">
+                <input
+                  type="number"
+                  min={field.min}
+                  max={field.max}
+                  step={field.step}
+                  value={field.value}
+                  inputmode="decimal"
+                  data-lab-input={field.id}
+                  aria-label={`${field.label}数值`}
+                />
+                {field.unit && <small>{field.unit}</small>}
+              </span>
+            </div>
+          </div>
+        ))
+      }
+      <button class="btn lab-reset" type="reset">恢复默认参数</button>
+    </form>
+
+    <div class="lab-output" aria-live="polite">
+      <div class="lab-verdict" data-lab-verdict>{initial.verdict}</div>
+      <div class="lab-metrics" data-lab-metrics>
+        {
+          initial.metrics.map((metric) => (
+            <article class:list={["lab-metric", `lab-metric--${metric.tone ?? "neutral"}`]} data-metric-card>
+              <p>{metric.label}</p>
+              <strong>
+                <span data-metric-value>{metric.value.toLocaleString("zh-CN")}</span>
+                <small data-metric-unit>{metric.unit}</small>
+              </strong>
+              <small data-metric-detail>{metric.detail}</small>
+            </article>
+          ))
+        }
+      </div>
+      <div class="lab-evidence">
+        <span>EVIDENCE NOTE</span>
+        <p>{lab.evidence}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { loadLabEvaluator } from "@/lib/lab-client";
+
+  const root = document.querySelector<HTMLElement>("[data-lab-explorer]");
+  if (root) {
+    const slug = root.dataset.labSlug ?? "";
+    const form = root.querySelector<HTMLFormElement>("[data-lab-form]");
+    const verdict = root.querySelector<HTMLElement>("[data-lab-verdict]");
+    const metrics = root.querySelector<HTMLElement>("[data-lab-metrics]");
+    let renderSequence = 0;
+    let evaluatorLoad: ReturnType<typeof loadLabEvaluator> | undefined;
+
+    const formatValue = (value: number) => {
+      const digits = Math.abs(value) < 0.01 ? 4 : Math.abs(value) < 1 ? 3 : Math.abs(value) < 100 ? 2 : 1;
+      return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: digits }).format(value);
+    };
+
+    function loadEvaluator() {
+      evaluatorLoad ??= loadLabEvaluator(slug);
+      return evaluatorLoad;
+    }
+
+    function readValues() {
+      if (!form) return {};
+      const entries: Array<[string, number]> = [];
+      form.querySelectorAll<HTMLInputElement>("[data-lab-range]").forEach((range) => {
+        const id = range.dataset.labRange ?? "";
+        const number = form.querySelector<HTMLInputElement>(`[data-lab-input="${id}"]`);
+        const raw = Number(number?.value ?? range.value);
+        const min = Number(range.min);
+        const max = Number(range.max);
+        const fallback = Number(range.dataset.labDefault ?? range.value);
+        const value = Number.isFinite(raw) ? Math.min(max, Math.max(min, raw)) : fallback;
+        if (number) number.value = String(value);
+        range.value = String(value);
+        entries.push([id, value]);
+      });
+      return Object.fromEntries(entries);
+    }
+
+    async function render() {
+      if (!verdict || !metrics) return;
+      const sequence = ++renderSequence;
+      metrics.setAttribute("aria-busy", "true");
+      try {
+        const evaluator = await loadEvaluator();
+        if (!evaluator || sequence !== renderSequence) return;
+        const result = evaluator(readValues());
+        verdict.textContent = result.verdict;
+        const cards = Array.from(metrics.querySelectorAll<HTMLElement>("[data-metric-card]"));
+        result.metrics.forEach((metric, index) => {
+          const card = cards[index];
+          if (!card) return;
+          card.className = `lab-metric lab-metric--${metric.tone ?? "neutral"}`;
+          const value = card.querySelector<HTMLElement>("[data-metric-value]");
+          const unit = card.querySelector<HTMLElement>("[data-metric-unit]");
+          const detail = card.querySelector<HTMLElement>("[data-metric-detail]");
+          if (value) value.textContent = formatValue(metric.value);
+          if (unit) unit.textContent = metric.unit;
+          if (detail) detail.textContent = metric.detail;
+        });
+      } catch {
+        evaluatorLoad = undefined;
+        if (sequence === renderSequence) {
+          verdict.textContent = "实验模块加载失败。静态结论仍可阅读，请刷新页面重试。";
+        }
+      } finally {
+        if (sequence === renderSequence) metrics.removeAttribute("aria-busy");
+      }
+    }
+
+    form?.addEventListener("input", (event) => {
+      const target = event.target as HTMLInputElement;
+      if (target.matches("[data-lab-range]")) {
+        const number = form.querySelector<HTMLInputElement>(`[data-lab-input="${target.dataset.labRange}"]`);
+        if (number) number.value = target.value;
+      }
+      if (target.matches("[data-lab-input]")) {
+        const range = form.querySelector<HTMLInputElement>(`[data-lab-range="${target.dataset.labInput}"]`);
+        if (range) {
+          const value = Math.min(Number(range.max), Math.max(Number(range.min), Number(target.value)));
+          range.value = String(value);
+        }
+      }
+      void render();
+    });
+
+    form?.addEventListener("reset", () => {
+      window.setTimeout(() => void render(), 0);
+    });
+
+    const prefetch = () => {
+      void loadEvaluator().catch(() => {
+        evaluatorLoad = undefined;
+      });
+    };
+    form?.addEventListener("pointerover", prefetch, { once: true });
+    form?.addEventListener("focusin", prefetch, { once: true });
+  }
+</script>
+
+<style>
+  .lab-explorer {
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    box-shadow: var(--shadow-tight);
+  }
+
+  .lab-explorer__head {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 2rem;
+    border-block-end: 1px solid var(--line);
+    padding: clamp(1rem, 2.5vw, 1.6rem);
+  }
+
+  .lab-explorer__head h2 {
+    margin: 0.45rem 0 0.55rem;
+    font-size: clamp(1.5rem, 2.8vw, 2.3rem);
+    font-weight: 630;
+    letter-spacing: -0.045em;
+  }
+
+  .lab-explorer__head p:last-child {
+    max-width: 48rem;
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+  }
+
+  .lab-explorer__status {
+    flex: 0 0 auto;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--success);
+    padding: 0.2rem 0.55rem;
+    font: 0.62rem var(--font-mono);
+  }
+
+  .lab-explorer__grid {
+    display: grid;
+    grid-template-columns: minmax(16rem, 0.75fr) minmax(0, 1.25fr);
+  }
+
+  .lab-controls {
+    display: grid;
+    align-content: start;
+    gap: 1rem;
+    border-inline-end: 1px solid var(--line);
+    padding: clamp(1rem, 2.5vw, 1.6rem);
+  }
+
+  .lab-field {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .lab-field__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.8rem;
+  }
+
+  .lab-field__head label {
+    font-size: 0.8rem;
+    font-weight: 590;
+  }
+
+  .lab-field__head span {
+    max-width: 11rem;
+    color: var(--ink-faint);
+    font: 0.59rem/1.4 var(--font-mono);
+    text-align: end;
+  }
+
+  .lab-field__input {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 6.5rem;
+    gap: 0.7rem;
+    align-items: center;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--ai);
+  }
+
+  .lab-field__number {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    border: 1px solid var(--line);
+    background: var(--surface-strong);
+    padding: 0.18rem 0.35rem;
+  }
+
+  .lab-field__number input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--ink);
+    font: 0.72rem var(--font-mono);
+    text-align: end;
+  }
+
+  .lab-field__number small {
+    color: var(--ink-faint);
+    font: 0.58rem var(--font-mono);
+  }
+
+  .lab-reset {
+    justify-self: start;
+    margin-block-start: 0.5rem;
+    font-size: 0.76rem;
+  }
+
+  .lab-output {
+    display: grid;
+    align-content: start;
+    gap: 1rem;
+    padding: clamp(1rem, 2.5vw, 1.6rem);
+    background:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .lab-verdict {
+    min-height: 4.4rem;
+    border-inline-start: 3px solid var(--embedded);
+    background: color-mix(in srgb, var(--surface-strong) 85%, transparent);
+    padding: 0.9rem 1rem;
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+    line-height: 1.6;
+  }
+
+  .lab-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.7rem;
+  }
+
+  .lab-metric {
+    display: grid;
+    align-content: start;
+    min-height: 9.5rem;
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--surface-strong) 93%, transparent);
+    padding: 0.8rem;
+  }
+
+  .lab-metric p {
+    margin: 0;
+    color: var(--ink-faint);
+    font: 0.64rem var(--font-mono);
+  }
+
+  .lab-metric strong {
+    overflow-wrap: anywhere;
+    margin-block: auto 0.45rem;
+    color: var(--ai);
+    font-size: clamp(1.45rem, 2.5vw, 2.1rem);
+    font-weight: 620;
+    letter-spacing: -0.045em;
+    line-height: 1;
+  }
+
+  .lab-metric--embedded strong {
+    color: var(--embedded);
+  }
+
+  .lab-metric--neutral strong {
+    color: var(--ink);
+  }
+
+  .lab-metric strong small {
+    margin-inline-start: 0.22rem;
+    color: var(--ink-faint);
+    font: 0.62rem var(--font-mono);
+    letter-spacing: 0;
+  }
+
+  .lab-metric > small {
+    color: var(--ink-faint);
+    font-size: 0.63rem;
+    line-height: 1.45;
+  }
+
+  .lab-evidence {
+    display: grid;
+    grid-template-columns: 7rem minmax(0, 1fr);
+    gap: 0.8rem;
+    border-block-start: 1px solid var(--line);
+    padding-block-start: 0.8rem;
+  }
+
+  .lab-evidence span {
+    color: var(--ink-faint);
+    font: 0.58rem var(--font-mono);
+  }
+
+  .lab-evidence p {
+    margin: 0;
+    color: var(--ink-faint);
+    font-size: 0.68rem;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 900px) {
+    .lab-explorer__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .lab-controls {
+      border-inline-end: 0;
+      border-block-end: 1px solid var(--line);
+    }
+  }
+
+  @media (max-width: 620px) {
+    .lab-explorer__head {
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .lab-metrics {
+      grid-template-columns: 1fr;
+    }
+
+    .lab-metric {
+      min-height: 7rem;
+    }
+  }
+</style>

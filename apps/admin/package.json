@@ -11,6 +11,10 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@dmsj/content-model": "workspace:*",
+    "@fontsource-variable/instrument-sans": "^5.2.8",
+    "dompurify": "^3.4.17",
+    "marked": "^18.1.1",
     "vue": "^3.5.42",
     "vue-router": "^5.3.1"
   },

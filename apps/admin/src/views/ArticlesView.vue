@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
+import { contentDomains } from "@dmsj/content-model";
+import DOMPurify from "dompurify";
+import { marked } from "marked";
 
 import {
   del,
@@ -12,11 +15,13 @@ import {
 } from "../api";
 
 const tabs = ["published", "drafts"] as const;
+const domainOptions = contentDomains.filter((domain) => domain.public);
 const activeTab = ref<(typeof tabs)[number]>("published");
 const published = ref<PublishedFile[]>([]);
 const draftRows = ref<DraftListItem[]>([]);
 const error = ref("");
 const notice = ref("");
+const previewing = ref(false);
 
 // 草稿表单 / 编辑器状态
 const editingRaw = ref(false);
@@ -33,8 +38,23 @@ const form = reactive({
   description: "",
   tagsText: "",
   series: "",
+  kind: "note",
+  topic: "",
+  maturity: "emerging",
+  lab: "",
+  question: "",
+  conclusion: "",
+  sourcesText: "[]",
+  evidenceLevel: "analyzed",
+  evidenceScope: "",
+  evidenceCaveatsText: "",
+  relatedText: "",
+  takeawaysText: "",
+  version: 0,
   body: "",
 });
+
+const previewHtml = computed(() => DOMPurify.sanitize(marked.parse(form.body) as string));
 
 function dirsOf() {
   return form.dirsText
@@ -52,6 +72,22 @@ function tagsOf() {
     .slice(0, 12);
 }
 
+function linesOf(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function sourcesOf() {
+  try {
+    const parsed = JSON.parse(form.sourcesText || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    throw new Error("来源必须是 JSON 数组，例如 [{\"title\":\"...\",\"url\":\"https://...\"}]");
+  }
+}
+
 function resetForm() {
   Object.assign(form, {
     id: "",
@@ -62,6 +98,19 @@ function resetForm() {
     description: "",
     tagsText: "",
     series: "",
+    kind: "note",
+    topic: "",
+    maturity: "emerging",
+    lab: "",
+    question: "",
+    conclusion: "",
+    sourcesText: "[]",
+    evidenceLevel: "analyzed",
+    evidenceScope: "",
+    evidenceCaveatsText: "",
+    relatedText: "",
+    takeawaysText: "",
+    version: 0,
     body: "",
   });
 }
@@ -93,6 +142,19 @@ async function editDraft(row: DraftListItem) {
     description: detail.description,
     tagsText: detail.tags.join(", "),
     series: detail.series ?? "",
+    kind: detail.metadata?.kind ?? "note",
+    topic: detail.metadata?.topic ?? "",
+    maturity: detail.metadata?.maturity ?? "emerging",
+    lab: detail.metadata?.lab ?? "",
+    question: detail.metadata?.question ?? "",
+    conclusion: detail.metadata?.conclusion ?? "",
+    sourcesText: JSON.stringify(detail.metadata?.sources ?? [], null, 2),
+    evidenceLevel: detail.metadata?.evidence?.level ?? "analyzed",
+    evidenceScope: detail.metadata?.evidence?.scope ?? "",
+    evidenceCaveatsText: (detail.metadata?.evidence?.caveats ?? []).join("\n"),
+    relatedText: (detail.metadata?.related ?? []).join("\n"),
+    takeawaysText: (detail.metadata?.takeaways ?? []).join("\n"),
+    version: detail.version ?? 0,
     body: detail.body,
   });
   editingRaw.value = false;
@@ -102,7 +164,7 @@ async function saveDraft() {
   error.value = "";
   notice.value = "";
   try {
-    await post("/api/admin/drafts", {
+    const saved = await post<{ id: string }>("/api/admin/drafts", {
       id: form.id || undefined,
       domain: form.domain,
       dirs: dirsOf(),
@@ -111,8 +173,27 @@ async function saveDraft() {
       description: form.description.trim(),
       tags: tagsOf(),
       series: form.series.trim() || undefined,
+      kind: form.kind,
+      topic: form.topic.trim() || undefined,
+      maturity: form.maturity || undefined,
+      lab: form.lab.trim() || undefined,
+      question: form.question.trim() || undefined,
+      conclusion: form.conclusion.trim() || undefined,
+      sources: sourcesOf(),
+      evidence: {
+        level: form.evidenceLevel,
+        scope: form.evidenceScope.trim() || undefined,
+        caveats: linesOf(form.evidenceCaveatsText),
+      },
+      related: linesOf(form.relatedText),
+      verifiedAt: new Date().toISOString().slice(0, 10),
+      takeaways: linesOf(form.takeawaysText),
+      version: form.version || undefined,
       body: form.body,
     });
+    form.id = saved.id;
+    const detail = await get<DraftListItem & { body: string }>(`/api/admin/drafts/${saved.id}`);
+    form.version = detail.version ?? 0;
     notice.value = "草稿已保存到 D1（发布前不会进入公开仓库）";
     await load();
   } catch (e) {
@@ -123,8 +204,12 @@ async function saveDraft() {
 async function publishDraft(row: DraftListItem) {
   if (!window.confirm(`确认发布《${row.title}》？将直接提交到 GitHub main 分支。`)) return;
   try {
-    const result = await post<{ path: string }>(`/api/admin/drafts/${row.id}/publish`);
-    notice.value = `已发布：${result.path}（等待 Pages 重建）`;
+    const result = await post<{ path: string; draftRetained?: boolean }>(
+      `/api/admin/drafts/${row.id}/publish`,
+    );
+    notice.value = result.draftRetained
+      ? `已发布 ${result.path}；检测到更新版本的草稿，已保留以避免覆盖。`
+      : `已发布：${result.path}（等待 Pages 重建）`;
     resetForm();
     await load();
     activeTab.value = "published";
@@ -245,11 +330,9 @@ onMounted(async () => {
         <div class="field" style="flex: 1">
           <label for="d-domain">内容域</label>
           <select id="d-domain" v-model="form.domain">
-            <option value="algorithms">算法心得</option>
-            <option value="embedded">嵌入式经验</option>
-            <option value="llm-agent">LLM / Agent</option>
-            <option value="projects">项目展示</option>
-            <option value="thoughts">随想杂谈</option>
+            <option v-for="domain in domainOptions" :key="domain.key" :value="domain.key">
+              {{ domain.label }}
+            </option>
           </select>
         </div>
         <div class="field" style="flex: 1">
@@ -269,9 +352,91 @@ onMounted(async () => {
         <label for="d-series">系列（可选）</label>
         <input id="d-series" v-model="form.series" />
       </div>
+      <div class="form-row">
+        <div class="field" style="flex: 1">
+          <label for="d-kind">文章类型</label>
+          <select id="d-kind" v-model="form.kind">
+            <option value="note">普通笔记</option>
+            <option value="flagship">旗舰研究</option>
+            <option value="experiment">实验笔记</option>
+            <option value="synthesis">跨域综合</option>
+            <option value="project">项目档案</option>
+            <option value="essay">工作方法</option>
+          </select>
+        </div>
+        <div class="field" style="flex: 1">
+          <label for="d-maturity">成熟度</label>
+          <select id="d-maturity" v-model="form.maturity">
+            <option value="emerging">演化中</option>
+            <option value="established">已建立</option>
+            <option value="experimental">实验性</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field" style="flex: 1">
+          <label for="d-topic">前沿主题 ID</label>
+          <input id="d-topic" v-model="form.topic" placeholder="如 paged-kv-cache" />
+        </div>
+        <div class="field" style="flex: 1">
+          <label for="d-lab">配套实验 ID</label>
+          <input id="d-lab" v-model="form.lab" placeholder="如 kv-budget" />
+        </div>
+      </div>
       <div class="field">
-        <label for="d-body">Markdown 正文</label>
+        <label for="d-question">核心问题</label>
+        <input id="d-question" v-model="form.question" />
+      </div>
+      <div class="field">
+        <label for="d-conclusion">有边界的结论</label>
+        <textarea id="d-conclusion" v-model="form.conclusion" style="min-height: 7rem"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="field" style="flex: 1">
+          <label for="d-evidence-level">证据等级</label>
+          <select id="d-evidence-level" v-model="form.evidenceLevel">
+            <option value="analyzed">分析推演</option>
+            <option value="runnable">可运行</option>
+            <option value="reproduced">本地复现</option>
+          </select>
+        </div>
+        <div class="field" style="flex: 2">
+          <label for="d-evidence-scope">适用范围与局限</label>
+          <input id="d-evidence-scope" v-model="form.evidenceScope" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="d-caveats">证据局限（每行一条）</label>
+        <textarea id="d-caveats" v-model="form.evidenceCaveatsText" style="min-height: 6rem"></textarea>
+      </div>
+      <div class="field">
+        <label for="d-sources">一手来源 JSON</label>
+        <textarea
+          id="d-sources"
+          v-model="form.sourcesText"
+          style="min-height: 8rem"
+          spellcheck="false"
+        ></textarea>
+      </div>
+      <div class="form-row">
+        <div class="field" style="flex: 1">
+          <label for="d-related">关联文章（每行一个内容路径）</label>
+          <textarea id="d-related" v-model="form.relatedText" style="min-height: 7rem"></textarea>
+        </div>
+        <div class="field" style="flex: 1">
+          <label for="d-takeaways">结论要点（每行一条）</label>
+          <textarea id="d-takeaways" v-model="form.takeawaysText" style="min-height: 7rem"></textarea>
+        </div>
+      </div>
+      <div class="field">
+        <div class="preview-toggle">
+          <label for="d-body">Markdown 正文</label>
+          <button class="btn" type="button" @click="previewing = !previewing">
+            {{ previewing ? "返回编辑" : "安全预览" }}
+          </button>
+        </div>
         <textarea id="d-body" v-model="form.body"></textarea>
+        <article v-if="previewing" class="markdown-preview" v-html="previewHtml"></article>
       </div>
       <button class="btn btn-primary" type="button" @click="saveDraft">保存草稿</button>
       <button v-if="form.id" class="btn" type="button" @click="publishDraft(draftRows.find((r) => r.id === form.id)!)">

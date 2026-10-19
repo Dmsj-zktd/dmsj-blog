@@ -7,6 +7,18 @@ series: "面试高频 DP 复盘"
 lang: "zh-CN"
 draft: false
 featured: true
+kind: "note"
+maturity: "established"
+verifiedAt: 2026-10-18
+question: "LIS 如何从 O(n²) 状态转移优化到 O(n log n)？"
+conclusion: "tails 数组维护每个长度可达的最小结尾；它不一定是真实子序列，但足以让后续元素获得更低的延伸门槛。"
+takeaways:
+  - "朴素 DP 的状态是“以 i 结尾”。"
+  - "二分优化维护的是长度到最小结尾的映射。"
+  - "严格递增与非严格递增只在替换条件上不同。"
+evidence:
+  level: "analyzed"
+  scope: "算法推导与可复现代码分析。"
 ---
 
 最长递增子序列（Longest Increasing Subsequence, LIS）是面试里“一个结论能用一整类题”的典型。难点不在背代码，而在把两种解法之间的模型关系讲清楚。

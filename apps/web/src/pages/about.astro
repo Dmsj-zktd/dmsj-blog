@@ -2,27 +2,453 @@
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import SocialLinks from "@/components/SocialLinks.astro";
 import { site } from "@/config/site";
-import { ui } from "@/i18n/zh-CN";
+import { frontierTopics } from "@dmsj/content-model";
+import { labDefinitions } from "@/lib/labs";
+import { getPublishedPosts } from "@/lib/posts";
+
+const posts = await getPublishedPosts();
+const sourceCount = new Set(
+  frontierTopics.flatMap((topic) => topic.sources.map((source) => source.url)),
+).size;
+
+const focusAreas = [
+  {
+    index: "01",
+    label: "Inference systems",
+    title: "推理系统与内存层级",
+    copy: "KV Cache、注意力 IO、MoE 路由、量化与服务调度。核心问题不是“模型多大”，而是数据在 HBM、SRAM 与缓存之间如何移动。",
+    href: "/frontier/paged-kv-cache/",
+    accent: "ai",
+  },
+  {
+    index: "02",
+    label: "Agent reliability",
+    title: "Agent 可靠性与安全边界",
+    copy: "工具协议、评测、沙箱、幂等与截止期。把不确定的模型输出放进确定性的工程边界，并让每次出错都能被审计和回滚。",
+    href: "/frontier/mcp-trust-boundary/",
+    accent: "ai",
+  },
+  {
+    index: "03",
+    label: "Embedded / edge",
+    title: "嵌入式、RISC-V 与端侧 AI",
+    copy: "实时调度、TinyML、RISC-V、Chiplet 与可信嵌入式栈。关心可部署预算，而不是单张 benchmark 图。",
+    href: "/frontier/edge-small-models/",
+    accent: "embedded",
+  },
+];
+
+const evidence = [
+  {
+    title: "研究笔记有证据等级",
+    copy: "论文报告、软件模拟和分析推演被显式区分；来源、范围与局限跟随文章保存。",
+    href: "/frontier/",
+  },
+  {
+    title: "实验有可检查公式",
+    copy: "十个实验使用同一套可测试 TypeScript 模型生成默认结果，页面不是静态截图。",
+    href: "/lab/",
+  },
+  {
+    title: "站点本身是工程案例",
+    copy: "Astro 静态优先、Cloudflare 边缘 API、Git-first 内容、Pagefind 本地搜索和可访问性降级。",
+    href: "/projects/dmsj-blog/architecture-notes/",
+  },
+];
 ---
 
-<BaseLayout title={ui.about.title}>
-  <article class="shell page-wrap article">
-    <p class="eyebrow">About</p>
-    <h1>{ui.about.title}</h1>
-    <p>
-      你好，我是 <strong>{site.author.name}</strong>。
-    </p>
-    <p>{site.author.bio}</p>
-    <SocialLinks />
-    <h2>这个站怎么用</h2>
-    <ul>
-      <li>文章按内容域组织，可用标签与站内搜索快速定位；</li>
-      <li>所有文章正文保留在 Git 仓库，便于溯源与修订；</li>
-      <li>代码仓库公开，欢迎通过评论或 GitHub 讨论交流。</li>
-    </ul>
-    <h2>许可</h2>
-    <p>
-      文章正文采用 {site.license.content}；站点代码采用 {site.license.code}。
-    </p>
-  </article>
+<BaseLayout title={`关于 DMSJ · 能力档案`} description={site.description}>
+  <section class="shell about-hero">
+    <div class="about-hero__main">
+      <p class="mono-label">Profile / 能力档案</p>
+      <h1>从底层约束出发，设计能被验证的系统。</h1>
+      <p class="about-hero__lead">{site.author.bio}</p>
+      <p>
+        我把 AI 推理、Agent 工程与嵌入式系统放在同一张图里：它们都在争夺内存、时间、
+        可观测性和信任边界。这个博客用于记录那些能被复现、被质疑、也能被继续修正的结论。
+      </p>
+      <SocialLinks />
+    </div>
+    <aside class="about-index" aria-label="档案概览">
+      <div><strong>{posts.length.toString().padStart(2, "0")}</strong><span>公开笔记</span></div>
+      <div><strong>{frontierTopics.length}</strong><span>前沿主题</span></div>
+      <div><strong>{labDefinitions.length}</strong><span>软件实验</span></div>
+      <div><strong>{sourceCount}</strong><span>一手来源</span></div>
+      <p>持续更新 · 以 Git 修订历史为准</p>
+    </aside>
+  </section>
+
+  <section class="shell section focus">
+    <div class="section-heading">
+      <div>
+        <p class="mono-label">Focus / 研究方向</p>
+        <h2>三条相互穿透的技术线</h2>
+      </div>
+      <p>AI 与嵌入式不是两个孤岛。内存层级、截止期与可信计算让它们重新交汇。</p>
+    </div>
+    <div class="focus-list">
+      {
+        focusAreas.map((area) => (
+          <a class:list={["focus-item", `focus-item--${area.accent}`]} href={area.href}>
+            <span>{area.index}</span>
+            <div>
+              <small>{area.label}</small>
+              <h3>{area.title}</h3>
+              <p>{area.copy}</p>
+            </div>
+            <strong aria-hidden="true">↗</strong>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="shell section capability">
+    <div class="capability__heading">
+      <p class="mono-label">Evidence over adjectives</p>
+      <h2>能力不靠形容词，靠可点击的证据。</h2>
+    </div>
+    <div class="capability__grid">
+      {
+        evidence.map((item, index) => (
+          <a href={item.href}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <h3>{item.title}</h3>
+            <p>{item.copy}</p>
+            <small>打开证据 ↗</small>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="shell section principles">
+    <div class="principles__grid">
+      <div>
+        <p class="mono-label">Operating principles</p>
+        <h2>我如何判断一项技术是否值得留下。</h2>
+      </div>
+      <ol>
+        <li><span>01</span><strong>先写约束</strong><p>没有预算、基线与失败条件的性能结论不算结论。</p></li>
+        <li><span>02</span><strong>让数据移动说话</strong><p>从 HBM 到 SRAM，再到寄存器与互连，很多“算法创新”最终是数据流设计。</p></li>
+        <li><span>03</span><strong>把安全当系统属性</strong><p>输入校验、权限、实时性、侧信道和供应链属于同一条信任链。</p></li>
+        <li><span>04</span><strong>保持内容优先</strong><p>视觉和交互应该降低理解成本，而不是替内容争取注意力。</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="shell section license">
+    <p class="mono-label">License & contact</p>
+    <div>
+      <p>文章正文采用 {site.license.content}；站点代码采用 {site.license.code}。</p>
+      <a href={`https://github.com/${site.repo.owner}/${site.repo.repo}`} rel="noreferrer">GitHub 仓库 ↗</a>
+    </div>
+  </section>
 </BaseLayout>
+
+<style>
+  .about-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(16rem, 22rem);
+    gap: clamp(2rem, 6vw, 6rem);
+    align-items: start;
+    border-block-end: 1px solid var(--line);
+    padding-block: clamp(3rem, 8vw, 7rem);
+  }
+
+  .about-hero h1 {
+    max-width: 13ch;
+    margin: 0.7rem 0 1rem;
+    font-size: clamp(2.8rem, 7vw, 6.4rem);
+    font-weight: 620;
+    letter-spacing: -0.075em;
+    line-height: 0.92;
+  }
+
+  .about-hero__lead {
+    max-width: 44rem;
+    color: var(--ai);
+    font-family: var(--font-reading);
+    font-size: clamp(1.15rem, 1rem + 0.45vw, 1.45rem);
+  }
+
+  .about-hero__main > p:not(.mono-label):not(.about-hero__lead) {
+    max-width: 48rem;
+    color: var(--ink-soft);
+  }
+
+  .about-index {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    box-shadow: var(--shadow-tight);
+  }
+
+  .about-index > div {
+    min-height: 7.5rem;
+    border-block-end: 1px solid var(--line);
+    border-inline-end: 1px solid var(--line);
+    padding: 0.9rem;
+  }
+
+  .about-index > div:nth-child(2n) {
+    border-inline-end: 0;
+  }
+
+  .about-index strong {
+    display: block;
+    font-size: 2.4rem;
+    font-weight: 620;
+    letter-spacing: -0.065em;
+    line-height: 1;
+  }
+
+  .about-index span {
+    display: block;
+    margin-block-start: 0.45rem;
+    color: var(--ink-faint);
+    font: 0.62rem var(--font-mono);
+  }
+
+  .about-index > p {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 0.8rem;
+    color: var(--ink-faint);
+    font: 0.61rem var(--font-mono);
+  }
+
+  .focus-list {
+    border-block-start: 1px solid var(--line);
+  }
+
+  .focus-item {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
+    gap: clamp(0.7rem, 2vw, 1.5rem);
+    align-items: start;
+    border-block-end: 1px solid var(--line);
+    color: var(--ink);
+    padding-block: 1.2rem;
+    text-decoration: none;
+  }
+
+  .focus-item:hover {
+    background: color-mix(in srgb, var(--ai-soft) 35%, transparent);
+    text-decoration: none;
+  }
+
+  .focus-item > span {
+    color: var(--ink-faint);
+    font: 0.67rem var(--font-mono);
+  }
+
+  .focus-item small {
+    color: var(--ai);
+    font: 0.62rem var(--font-mono);
+  }
+
+  .focus-item--embedded small {
+    color: var(--embedded);
+  }
+
+  .focus-item h3 {
+    margin: 0.23rem 0 0.4rem;
+    font-size: clamp(1.3rem, 2.6vw, 2rem);
+    font-weight: 610;
+    letter-spacing: -0.035em;
+  }
+
+  .focus-item p {
+    max-width: 48rem;
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.83rem;
+  }
+
+  .focus-item > strong {
+    color: var(--ai);
+    font-size: 1.4rem;
+  }
+
+  .focus-item--embedded > strong {
+    color: var(--embedded);
+  }
+
+  .capability {
+    border-block-start: 1px solid var(--line);
+  }
+
+  .capability__heading {
+    display: grid;
+    grid-template-columns: 0.7fr 1.3fr;
+    gap: 2rem;
+    margin-block-end: 1.5rem;
+  }
+
+  .capability__heading h2 {
+    max-width: 16ch;
+    margin: 0;
+    font-size: clamp(2.1rem, 4.5vw, 4rem);
+    font-weight: 620;
+    letter-spacing: -0.06em;
+    line-height: 0.98;
+  }
+
+  .capability__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-block-start: 1px solid var(--line);
+    border-inline-start: 1px solid var(--line);
+  }
+
+  .capability__grid a {
+    display: grid;
+    min-height: 15rem;
+    align-content: start;
+    border-block-end: 1px solid var(--line);
+    border-inline-end: 1px solid var(--line);
+    color: var(--ink);
+    padding: 1rem;
+    text-decoration: none;
+  }
+
+  .capability__grid a:hover {
+    background: var(--ai-soft);
+  }
+
+  .capability__grid span,
+  .capability__grid small {
+    color: var(--ink-faint);
+    font: 0.63rem var(--font-mono);
+  }
+
+  .capability__grid h3 {
+    margin: 2.2rem 0 0.5rem;
+    font-size: 1.2rem;
+    font-weight: 610;
+  }
+
+  .capability__grid p {
+    margin: 0 0 1rem;
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+  }
+
+  .capability__grid small {
+    margin-block-start: auto;
+    color: var(--ai);
+  }
+
+  .principles {
+    border-block-start: 1px solid var(--line);
+    background: color-mix(in srgb, var(--surface) 86%, transparent);
+  }
+
+  .principles__grid {
+    display: grid;
+    grid-template-columns: minmax(14rem, 0.7fr) minmax(0, 1.3fr);
+    gap: clamp(2rem, 6vw, 6rem);
+  }
+
+  .principles h2 {
+    max-width: 12ch;
+    margin: 0.55rem 0 0;
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 620;
+    letter-spacing: -0.055em;
+    line-height: 1;
+  }
+
+  .principles ol {
+    margin: 0;
+    padding: 0;
+    border-block-start: 1px solid var(--line);
+    list-style: none;
+  }
+
+  .principles li {
+    display: grid;
+    grid-template-columns: 2rem 8rem minmax(0, 1fr);
+    gap: 0.7rem;
+    border-block-end: 1px solid var(--line);
+    padding-block: 0.8rem;
+  }
+
+  .principles li span {
+    color: var(--ink-faint);
+    font: 0.64rem var(--font-mono);
+  }
+
+  .principles li strong {
+    font-size: 0.82rem;
+  }
+
+  .principles li p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.78rem;
+  }
+
+  .license {
+    border-block-start: 1px solid var(--line);
+  }
+
+  .license > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-block-start: 1px solid var(--line);
+    padding-block-start: 1rem;
+  }
+
+  .license p {
+    margin: 0;
+    color: var(--ink-soft);
+  }
+
+  .license a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  @media (max-width: 880px) {
+    .about-hero,
+    .principles__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .capability__heading {
+      grid-template-columns: 1fr;
+    }
+
+    .capability__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 620px) {
+    .focus-item {
+      grid-template-columns: 2rem minmax(0, 1fr);
+    }
+
+    .focus-item > strong {
+      display: none;
+    }
+
+    .principles li {
+      grid-template-columns: 1.5rem minmax(0, 1fr);
+    }
+
+    .principles li p {
+      grid-column: 2;
+    }
+
+    .license > div {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+</style>

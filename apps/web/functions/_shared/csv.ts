@@ -2,7 +2,8 @@ const dangerousPrefix = /^[=+\-@]/;
 
 export function csvCell(value: unknown): string {
   let text = String(value ?? "");
-  if (dangerousPrefix.test(text)) text = `'${text}`;
+  const significant = text.trimStart().replaceAll("\0", "");
+  if (dangerousPrefix.test(significant)) text = `'${text}`;
   if (/[",\n\r]/.test(text)) text = `"${text.replaceAll('"', '""')}"`;
   return text;
 }

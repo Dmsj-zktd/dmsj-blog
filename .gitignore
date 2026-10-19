@@ -4,6 +4,7 @@ node_modules/
 dist/
 .wrangler/
 .dev.vars
+docs/link-check-report.md
 .env
 .env.*
 !.env.example

@@ -1,163 +1,733 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import ArticleCard from "@/components/ArticleCard.astro";
+import AudienceSwitch from "@/components/AudienceSwitch.astro";
+import SignalMap from "@/components/SignalMap.astro";
 import SocialLinks from "@/components/SocialLinks.astro";
 import { site } from "@/config/site";
-import { contentModules } from "@/site/content-registry";
+import {
+  frontierTopics,
+  synthesisNotes,
+  weightedFrontierScore,
+} from "@dmsj/content-model";
 import { getPublishedPosts } from "@/lib/posts";
+import { audienceDefinitions } from "@/site/audiences";
+import { contentModules } from "@/site/content-registry";
 
 const posts = await getPublishedPosts();
-const latest = posts.slice(0, 8);
-const modulesWithCounts = contentModules
-  .filter((m) => m.public)
-  .map((m) => ({
-    module: m,
-    count: posts.filter((p) => p.domain === m.key).length,
-  }))
-  .sort((a, b) => a.module.order - b.module.order);
+const latest = posts.slice(0, 6);
+const featured =
+  posts.find((post) => post.kind === "synthesis" && post.featured) ??
+  posts.find((post) => post.featured) ??
+  posts[0];
+const domains = contentModules.filter((module) => module.public);
+const sourceCount = new Set(frontierTopics.flatMap((topic) => topic.sources.map((source) => source.url))).size;
+const domainCounts = new Map(
+  domains.map((domain) => [domain.key, posts.filter((post) => post.domain === domain.key).length]),
+);
+const topicCounts = Object.fromEntries(
+  frontierTopics.map((topic) => [
+    topic.id,
+    posts.filter((post) => post.topic === topic.id).length,
+  ]),
+);
 ---
 
-<BaseLayout title={`${site.name}`} description={site.description}>
-  <section class="shell hero">
-    <p
-      class="eyebrow tagline-reveal"
-      data-role="tagline"
-      data-options={JSON.stringify(site.taglines)}
-    >{site.tagline}</p>
-    <h1>
-      把<em>踩过的坑</em>写成可复用的知识
-    </h1>
-    <p class="hero-lead">
-      {site.description}
-    </p>
-    <p class="hero-bio">{site.author.bio}</p>
-    <SocialLinks />
+<BaseLayout
+  title={`${site.name} · AI 系统与嵌入式研究笔记`}
+  description={site.description}
+  keywords={["LLM", "AI systems", "embedded", "RISC-V", "agents", "systems engineering"]}
+>
+  <section class="home-hero">
+    <div class="shell">
+      <div class="home-hero__rail">
+        <span>DMSJ / RESEARCH NOTEBOOK</span>
+        <span>SHANGHAI · CN</span>
+        <span>REV. 2026.10</span>
+      </div>
+      <div class="home-hero__grid">
+        <div>
+          <p class="home-hero__kicker">{site.tagline}</p>
+          <h1><span>在硅与推理之间，</span><span>构建可验证的系统。</span></h1>
+          {audienceDefinitions.map((audience) => (
+            <div class="lens-copy" data-lens-copy={audience.id}>
+              <p class="home-hero__lead">{audience.description}</p>
+              <div class="home-hero__actions">
+                <a class="btn btn--primary" href={audience.primaryHref}>{audience.primaryLabel}</a>
+                <a class="btn" href={audience.secondaryHref}>{audience.secondaryLabel}</a>
+              </div>
+            </div>
+          ))}
+          <div class="home-hero__lens">
+            <span class="mono-label">选择你的进入方式</span>
+            <AudienceSwitch compact />
+            <span class="visually-hidden" aria-live="polite" data-lens-announcer></span>
+          </div>
+        </div>
+
+        <aside class="home-hero__side" aria-label="站点研究概览">
+          <div class="signal-card">
+            <div class="signal-card__top">
+              <span class="mono-label">Signal status</span>
+              <span class="signal-card__live"><i></i>INDEXED</span>
+            </div>
+            <p class="signal-card__number">10<span>/10</span></p>
+            <p class="signal-card__label">前沿主题已建立研究档案</p>
+            <div class="signal-card__bars" aria-hidden="true">
+              {[38, 62, 41, 84, 55, 71, 34, 92, 63, 48, 78, 58].map((height) => (
+                <i style={`--h:${height}%`}></i>
+              ))}
+            </div>
+          </div>
+          <dl class="home-metrics">
+            <div><dt>{posts.length.toString().padStart(2, "0")}</dt><dd>PUBLIC NOTES</dd></div>
+            <div><dt>10</dt><dd>SOFTWARE LABS</dd></div>
+            <div><dt>{sourceCount}</dt><dd>PRIMARY SOURCES</dd></div>
+          </dl>
+          <div class="home-hero__bio">
+            <p>{site.author.bio}</p>
+            <SocialLinks />
+          </div>
+        </aside>
+      </div>
+    </div>
   </section>
 
-  <section class="shell section-block">
-    <div class="section-head">
-      <h2 class="section-title">最近更新</h2>
-      <a class="btn" href="/archive/">全部归档</a>
-    </div>
-    <div class="post-grid">
-      {latest.map((post) => <ArticleCard post={post} />)}
-    </div>
-  </section>
-
-  <section class="shell section-block">
-    <div class="section-head">
-      <h2 class="section-title">按内容域浏览</h2>
-    </div>
-    <div class="module-grid">
-      {modulesWithCounts.map(({ module, count }) => (
-        <a class="module-card surface" href={`/${module.key}/`}>
-          <span class="eyebrow">{module.key}</span>
-          <strong>{module.label}</strong>
-          <span class="module-desc">{module.description}</span>
-          <span class="module-count">{count} 篇</span>
+  {featured && (
+    <section class="feature-dispatch section">
+      <div class="shell">
+        <div class="feature-dispatch__head">
+          <p class="mono-label">Current dispatch / 本期旗舰</p>
+          <a class="text-link" href={featured.urlPath}>打开完整研究</a>
+        </div>
+        <a class="feature-dispatch__body" href={featured.urlPath}>
+          <span class="feature-dispatch__index">00</span>
+          <div>
+            <p class="feature-dispatch__meta">{featured.kind} / {featured.topic ?? featured.domain} / {featured.evidence?.level ?? "editorial"}</p>
+            <h2>{featured.title}</h2>
+            <p>{featured.description}</p>
+          </div>
+          <span class="feature-dispatch__arrow" aria-hidden="true">↗</span>
         </a>
-      ))}
+      </div>
+    </section>
+  )}
+
+  <div class="shell"><SignalMap counts={topicCounts} /></div>
+
+  <section class="section">
+    <div class="shell">
+      <div class="section-heading">
+        <div>
+          <p class="mono-label">Research radar / 编辑评分</p>
+          <h2>不追逐热词，追踪会留下来的系统变化</h2>
+        </div>
+        <a class="text-link" href="/frontier/">查看十项主题</a>
+      </div>
+      <div class="radar-table" role="table" aria-label="前沿研究评分">
+        <div class="radar-table__row radar-table__head" role="row">
+          <span role="columnheader">RANK</span><span role="columnheader">主题</span>
+          <span role="columnheader">新颖</span><span role="columnheader">实用</span>
+          <span role="columnheader">证据</span><span role="columnheader">工程</span>
+          <span role="columnheader">综合</span>
+        </div>
+        {frontierTopics.slice(0, 5).map((topic) => (
+          <a class="radar-table__row" role="row" href={`/frontier/${topic.id}/`}>
+            <span role="cell">{String(topic.rank).padStart(2, "0")}</span>
+            <strong role="cell">{topic.shortTitle}</strong>
+            <span role="cell">{topic.score.novelty.toFixed(1)}</span>
+            <span role="cell">{topic.score.usefulness.toFixed(1)}</span>
+            <span role="cell">{topic.score.evidence.toFixed(1)}</span>
+            <span role="cell">{topic.score.engineering.toFixed(1)}</span>
+            <em role="cell">{weightedFrontierScore(topic.score)}</em>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section synthesis-band">
+    <div class="shell">
+      <div class="section-heading">
+        <div>
+          <p class="mono-label">Cross-domain synthesis / 综合研究</p>
+          <h2>让两条技术线在同一张约束图里相遇</h2>
+        </div>
+        <a class="text-link" href="/synthesis/">全部综合研究</a>
+      </div>
+      <div class="synthesis-grid">
+        {
+          synthesisNotes.map((note, index) => (
+            <a class="synthesis-card" href={note.href}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <h3>{note.title}</h3>
+                <p>{note.summary}</p>
+              </div>
+              <strong aria-hidden="true">↗</strong>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="shell">
+      <div class="section-heading">
+        <div>
+          <p class="mono-label">Latest notes / 最近更新</p>
+          <h2>从问题、证据到工程结论</h2>
+        </div>
+        <a class="text-link" href="/archive/">全部笔记</a>
+      </div>
+      <div>{latest.map((post, index) => <ArticleCard post={post} index={index} />)}</div>
+    </div>
+  </section>
+
+  <section class="section domains">
+    <div class="shell">
+      <div class="section-heading">
+        <div>
+          <p class="mono-label">Knowledge domains</p>
+          <h2>沿着知识域继续深入</h2>
+        </div>
+      </div>
+      <div class="domain-matrix">
+        {domains.map((domain, index) => (
+          <a class="domain-cell" href={`/${domain.key}/`}>
+            <span class="domain-cell__index">{String(index + 1).padStart(2, "0")}</span>
+            <span class="domain-cell__name">{domain.label}</span>
+            <span class="domain-cell__description">{domain.description}</span>
+            <span class="domain-cell__count">{domainCounts.get(domain.key) ?? 0} 篇公开笔记</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section proof">
+    <div class="shell proof__grid">
+      <div>
+        <p class="mono-label">Engineering evidence</p>
+        <h2>这个站本身也是项目证据。</h2>
+      </div>
+      <div class="proof__body">
+        <p>静态优先、边缘 API、Git-first 内容、安全审查与可访问性预算共同组成站点架构。论文结论与软件模拟分开标注，页面性能与可复现实验也能被检查。</p>
+        <div class="proof__links">
+          <a href="/projects/dmsj-blog/architecture-notes/"><span>架构与取舍</span><small>Git-first + Cloudflare</small></a>
+          <a href="/frontier/"><span>研究方法</span><small>评分与一手来源</small></a>
+          <a href="/about/"><span>能力档案</span><small>技术方向与证据入口</small></a>
+        </div>
+      </div>
     </div>
   </section>
 </BaseLayout>
 
-<style is:global>
-  .hero {
-    padding-block: clamp(3rem, 8vw, 5.5rem) clamp(2rem, 5vw, 3.5rem);
-    max-width: 54rem;
+<style>
+  .home-hero {
+    border-block-end: 1px solid var(--line);
+    padding-block: 1rem clamp(2.4rem, 5vw, 4.8rem);
   }
 
-  .hero h1 {
-    margin: 0.7rem 0 0.8rem;
-    font-family: var(--font-display);
-    font-weight: 720;
-    font-size: clamp(1.9rem, 5vw, 3.1rem);
-    line-height: 1.25;
-    letter-spacing: -0.015em;
-  }
-
-  .hero h1 em {
-    color: var(--accent);
-    font-style: normal;
-    text-decoration: underline;
-    text-decoration-thickness: 0.15em;
-    text-underline-offset: 0.16em;
-    text-decoration-color: var(--hairline);
-  }
-
-  .hero-lead {
-    max-width: 42rem;
-    color: var(--fg-soft);
-    font-size: 1.06rem;
-  }
-
-  .hero-bio {
-    margin: 0.3rem 0 0;
-    color: var(--fg-soft);
-    font-family: var(--font-display);
-    font-style: italic;
-  }
-
-  .section-block {
-    padding-block: 1.4rem;
-  }
-
-  .section-head {
+  .home-hero__rail {
     display: flex;
-    align-items: baseline;
     justify-content: space-between;
     gap: 1rem;
-    margin-block-end: 1rem;
+    border-block-end: 1px solid var(--line);
+    padding-block: 0.65rem 0.85rem;
+    color: var(--ink-faint);
+    font: 0.61rem var(--font-mono);
+    letter-spacing: 0.06em;
   }
 
-  .section-title {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: 1.35rem;
-    font-weight: 720;
-  }
-
-  .post-grid {
+  .home-hero__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr));
+    grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 0.7fr);
+    gap: clamp(2rem, 6vw, 6rem);
+    align-items: start;
+    padding-block-start: clamp(2.5rem, 6vw, 5.4rem);
+  }
+
+  .home-hero__kicker {
+    margin: 0;
+    color: var(--ai);
+    font: 0.75rem var(--font-mono);
+    letter-spacing: 0.055em;
+  }
+
+  .home-hero h1 {
+    max-width: none;
+    margin: 1rem 0 1.4rem;
+    font-size: clamp(2.8rem, 6.9vw, 6.5rem);
+    font-weight: 620;
+    letter-spacing: -0.068em;
+    line-height: 1.03;
+    text-wrap: balance;
+  }
+
+  .home-hero h1 span {
+    display: block;
+    white-space: nowrap;
+  }
+
+  .home-hero h1 span:last-child {
+    color: transparent;
+    -webkit-text-stroke: 1.5px var(--ink);
+  }
+
+  .lens-copy {
+    display: none;
+  }
+
+  html[data-lens="builder"] .lens-copy[data-lens-copy="builder"],
+  html[data-lens="hiring"] .lens-copy[data-lens-copy="hiring"],
+  html[data-lens="explorer"] .lens-copy[data-lens-copy="explorer"] {
+    display: block;
+    animation: lens-copy-in 220ms var(--ease-out) both;
+  }
+
+  @keyframes lens-copy-in {
+    from { opacity: 0; transform: translateY(0.35rem); }
+  }
+
+  .home-hero__lead {
+    max-width: 43rem;
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: clamp(1rem, 0.92rem + 0.35vw, 1.2rem);
+    line-height: 1.7;
+  }
+
+  .home-hero__actions,
+  .home-hero__lens {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-block-start: 1.3rem;
+  }
+
+  .home-hero__lens {
+    align-items: center;
+    gap: 0.7rem 1rem;
+    margin-block-start: 2rem;
+  }
+
+  .home-hero__side {
+    display: grid;
+    gap: 1rem;
+    border-inline-start: 1px solid var(--line);
+    padding-inline-start: clamp(1rem, 2vw, 1.8rem);
+  }
+
+  .signal-card {
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    padding: 1rem;
+    box-shadow: var(--shadow-tight);
+  }
+
+  .signal-card__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 1rem;
   }
 
-  .module-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
-    gap: 0.9rem;
+  .signal-card__live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    color: var(--success);
+    font: 0.58rem var(--font-mono);
   }
 
-  .module-card {
-    padding: 1.1rem;
+  .signal-card__live i {
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .signal-card__number {
+    margin: 1.2rem 0 0;
+    font-size: clamp(3.4rem, 6vw, 5.3rem);
+    font-weight: 620;
+    letter-spacing: -0.075em;
+    line-height: 0.8;
+  }
+
+  .signal-card__number span {
+    color: var(--ink-faint);
+    font-size: 0.3em;
+  }
+
+  .signal-card__label {
+    margin: 0.65rem 0 1rem;
+    color: var(--ink-soft);
+    font-size: 0.78rem;
+  }
+
+  .signal-card__bars {
+    display: flex;
+    height: 3.2rem;
+    align-items: end;
+    gap: 0.22rem;
+    border-block-start: 1px solid var(--line);
+    padding-block-start: 0.5rem;
+  }
+
+  .signal-card__bars i {
+    width: 100%;
+    height: var(--h);
+    background: linear-gradient(180deg, var(--ai), color-mix(in srgb, var(--ai) 18%, transparent));
+  }
+
+  .signal-card__bars i:nth-child(3n) {
+    background: linear-gradient(180deg, var(--embedded), color-mix(in srgb, var(--embedded) 18%, transparent));
+  }
+
+  .home-metrics {
     display: grid;
-    gap: 0.35rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0;
+  }
+
+  .home-metrics > div {
+    border-block-start: 1px solid var(--ink);
+    padding-block-start: 0.5rem;
+  }
+
+  .home-metrics dt {
+    font-size: 1.45rem;
+    font-weight: 620;
+    letter-spacing: -0.04em;
+  }
+
+  .home-metrics dd {
+    margin: 0.25rem 0 0;
+    color: var(--ink-faint);
+    font: 0.54rem/1.4 var(--font-mono);
+  }
+
+  .home-hero__bio {
+    border-block-start: 1px solid var(--line);
+    padding-block-start: 0.9rem;
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+  }
+
+  .home-hero__bio p {
+    margin: 0;
+  }
+
+  .feature-dispatch {
+    border-block-end: 1px solid var(--line);
+  }
+
+  .feature-dispatch__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .feature-dispatch__body {
+    display: grid;
+    grid-template-columns: 4rem minmax(0, 1fr) auto;
+    gap: clamp(1rem, 3vw, 3rem);
+    align-items: center;
+    border-block-start: 1px solid var(--line);
+    margin-block-start: 0.8rem;
+    padding-block: clamp(1.4rem, 3vw, 2.6rem);
+    color: var(--ink);
     text-decoration: none;
-    color: var(--fg);
-    transition: transform 150ms ease, border-color 150ms ease;
   }
 
-  .module-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--accent);
+  .feature-dispatch__index {
+    align-self: start;
+    color: var(--embedded);
+    font: 0.72rem var(--font-mono);
   }
 
-  .module-card strong {
-    font-family: var(--font-display);
-    font-size: 1.15rem;
+  .feature-dispatch__meta {
+    margin: 0;
+    color: var(--ink-faint);
+    font: 0.65rem var(--font-mono);
+    text-transform: uppercase;
   }
 
-  .module-desc {
-    color: var(--fg-soft);
+  .feature-dispatch h2 {
+    max-width: 26ch;
+    margin: 0.4rem 0 0.65rem;
+    font-size: clamp(1.8rem, 4vw, 3.7rem);
+    font-weight: 620;
+    letter-spacing: -0.055em;
+    line-height: 1.02;
+  }
+
+  .feature-dispatch p:last-child {
+    max-width: 50rem;
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.93rem;
+  }
+
+  .feature-dispatch__arrow {
+    color: var(--ai);
+    font-size: clamp(2rem, 4vw, 4rem);
+  }
+
+  .radar-table {
+    border-block-start: 1px solid var(--line);
+  }
+
+  .radar-table__row {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(10rem, 1.5fr) repeat(5, minmax(3.5rem, 0.5fr));
+    gap: 0.75rem;
+    align-items: center;
+    border-block-end: 1px solid var(--line);
+    padding-block: 0.85rem;
+    color: var(--ink-soft);
+    font: 0.7rem var(--font-mono);
+    text-decoration: none;
+  }
+
+  .radar-table__head {
+    color: var(--ink-faint);
+    font-size: 0.58rem;
+  }
+
+  .radar-table a.radar-table__row:hover {
+    background: color-mix(in srgb, var(--ai-soft) 35%, transparent);
+    color: var(--ink);
+  }
+
+  .radar-table strong {
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 0.92rem;
+    font-weight: 590;
+  }
+
+  .radar-table em {
+    color: var(--ai);
     font-size: 0.88rem;
+    font-style: normal;
+    font-weight: 600;
+  }
+
+  .domains {
+    border-block-start: 1px solid var(--line);
+  }
+
+  .synthesis-band {
+    border-block-start: 1px solid var(--line);
+  }
+
+  .synthesis-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-block-start: 1px solid var(--line);
+    border-inline-start: 1px solid var(--line);
+  }
+
+  .synthesis-card {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: start;
+    border-block-end: 1px solid var(--line);
+    border-inline-end: 1px solid var(--line);
+    color: var(--ink);
+    padding: clamp(1rem, 2.5vw, 1.4rem);
+    text-decoration: none;
+  }
+
+  .synthesis-card:hover {
+    background: var(--ai-soft);
+    text-decoration: none;
+  }
+
+  .synthesis-card > span,
+  .synthesis-card > strong {
+    color: var(--embedded);
+    font: 0.66rem/1.5 var(--font-mono);
+  }
+
+  .synthesis-card h3 {
+    max-width: 24ch;
+    margin: 0;
+    font-size: clamp(1.15rem, 2.2vw, 1.65rem);
+    font-weight: 620;
+    letter-spacing: -0.035em;
+    line-height: 1.18;
+  }
+
+  .synthesis-card p {
+    margin: 0.45rem 0 0;
+    color: var(--ink-soft);
+    font-size: 0.8rem;
     line-height: 1.6;
   }
 
-  .module-count {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    color: var(--fg-faint);
-    margin-block-start: 0.4rem;
+  .domain-matrix {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-block-start: 1px solid var(--line);
+    border-inline-start: 1px solid var(--line);
+  }
+
+  .domain-cell {
+    display: grid;
+    min-height: 12rem;
+    align-content: space-between;
+    border-block-end: 1px solid var(--line);
+    border-inline-end: 1px solid var(--line);
+    color: var(--ink);
+    padding: 1rem;
+    text-decoration: none;
+  }
+
+  .domain-cell:hover {
+    background: var(--ai-soft);
+    text-decoration: none;
+  }
+
+  .domain-cell__index,
+  .domain-cell__count {
+    color: var(--ink-faint);
+    font: 0.64rem var(--font-mono);
+  }
+
+  .domain-cell__name {
+    margin-block-start: 1.2rem;
+    font-size: 1.28rem;
+    font-weight: 610;
+  }
+
+  .domain-cell__description {
+    margin-block: 0.4rem 1rem;
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+  }
+
+  .proof {
+    border-block-start: 1px solid var(--line);
+    background: color-mix(in srgb, var(--surface) 84%, transparent);
+  }
+
+  .proof__grid {
+    display: grid;
+    grid-template-columns: minmax(14rem, 0.7fr) minmax(0, 1.3fr);
+    gap: clamp(2rem, 6vw, 6rem);
+  }
+
+  .proof h2 {
+    max-width: 12ch;
+    margin: 0.55rem 0 0;
+    font-size: clamp(2rem, 4.5vw, 4rem);
+    font-weight: 620;
+    letter-spacing: -0.06em;
+    line-height: 0.98;
+  }
+
+  .proof__body > p {
+    max-width: 48rem;
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 1.02rem;
+  }
+
+  .proof__links {
+    display: grid;
+    margin-block-start: 1.4rem;
+    border-block-start: 1px solid var(--line);
+  }
+
+  .proof__links a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-block-end: 1px solid var(--line);
+    color: var(--ink);
+    padding: 0.85rem 0;
+    text-decoration: none;
+  }
+
+  .proof__links small {
+    color: var(--ink-faint);
+    font: 0.66rem var(--font-mono);
+  }
+
+  @media (max-width: 980px) {
+    .home-hero__grid,
+    .proof__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .home-hero__side {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      border-inline-start: 0;
+      border-block-start: 1px solid var(--line);
+      padding-block-start: 1.2rem;
+      padding-inline-start: 0;
+    }
+
+    .home-hero__bio {
+      grid-column: 1 / -1;
+    }
+
+    .domain-matrix {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .feature-dispatch__body {
+      grid-template-columns: 2rem minmax(0, 1fr);
+    }
+
+    .feature-dispatch__arrow {
+      display: none;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .home-hero h1 {
+      font-size: clamp(2.3rem, 9.8vw, 4.6rem);
+      line-height: 1.14;
+      letter-spacing: -0.05em;
+    }
+
+    .home-hero__rail span:nth-child(2) {
+      display: none;
+    }
+
+    .home-hero__side {
+      grid-template-columns: 1fr;
+    }
+
+    .radar-table__row {
+      grid-template-columns: 2rem minmax(0, 1fr) 3rem 3rem;
+    }
+
+    .radar-table__row > :nth-child(n + 5):not(:last-child),
+    .radar-table__head > :nth-child(n + 5):not(:last-child) {
+      display: none;
+    }
+
+    .domain-matrix {
+      grid-template-columns: 1fr;
+    }
+
+    .synthesis-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .domain-cell {
+      min-height: 9rem;
+    }
   }
 </style>

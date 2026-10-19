@@ -30,6 +30,56 @@ jobs:
         run: pnpm test
       - name: Build
         run: pnpm build
+      - name: Performance budgets
+        run: pnpm budgets
+      - name: Upload static build
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  security:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Production dependency audit
+        run: pnpm audit --prod --registry=https://registry.npmjs.org
+      - name: Dependency review
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+      - uses: github/codeql-action/analyze@v3
 
   e2e:
     needs: quality
@@ -49,14 +99,14 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build
         run: pnpm build
-      - name: Install Chromium
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Install browsers
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
       - name: E2E smoke
         run: pnpm exec playwright test --config apps/web/playwright.config.ts
 
   deploy:
     if: github.ref == 'refs/heads/main' && vars.ENABLE_CF_DEPLOY == 'true'
-    needs: quality
+    needs: [quality, security, codeql, e2e]
     runs-on: ubuntu-latest
     environment: production
     env:
@@ -77,6 +127,11 @@ jobs:
           cache: pnpm
       - name: Install
         run: pnpm install --frozen-lockfile
+      - name: Download static build
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist
       - name: Migrate remote D1
         run: pnpm dlx wrangler d1 migrations apply DB --remote
       - name: Deploy Pages

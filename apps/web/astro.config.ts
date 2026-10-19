@@ -1,6 +1,5 @@
 import { defineConfig } from "astro/config";
 import mdx from "@astrojs/mdx";
-import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -15,7 +14,6 @@ export default defineConfig({
   trailingSlash: "ignore",
   integrations: [mdx()],
   vite: {
-    plugins: [tailwindcss()],
     resolve: {
       alias: {
         "@": fileURLToPath(new URL("./src", import.meta.url)),

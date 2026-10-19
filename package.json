@@ -15,13 +15,22 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "test": "pnpm -r test",
-    "test:e2e": "playwright test --config apps/web/playwright.config.ts",
-    "preview": "pnpm --filter @dmsj/web preview"
+    "test:e2e": "playwright test --config apps/web/playwright.config.ts --grep-invert @visual",
+    "test:a11y": "playwright test --config apps/web/playwright.config.ts --grep @a11y",
+    "test:visual": "playwright test --config apps/web/playwright.config.ts --grep @visual --project=chromium",
+    "test:preview": "playwright test --config apps/web/playwright.config.ts --grep \"deployed preview smoke\"",
+    "budgets": "node scripts/check-performance-budget.mjs",
+    "links:check": "node scripts/check-links.mjs",
+    "check:links": "node scripts/check-links.mjs",
+    "preview": "pnpm --filter @dmsj/web preview",
+    "labs": "tsx labs/generate.ts"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
     "@biomejs/biome": "^2.5.12",
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.4.1",
+    "tsx": "^4.23.15",
     "typescript": "6.0.0-beta"
   }
 }

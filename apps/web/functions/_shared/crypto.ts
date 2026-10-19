@@ -8,7 +8,10 @@ export function randomToken(bytes = 32): string {
 }
 
 export async function hashValue(env: Env, value: string): Promise<string> {
-  const salt = env.IP_SALT ?? (isProd(env) ? "prod-salt" : "local-salt");
+  if (isProd(env) && !env.IP_SALT) {
+    throw new Error("IP_SALT is required in production");
+  }
+  const salt = env.IP_SALT ?? "local-salt";
   const data = new TextEncoder().encode(`${salt}:${value}`);
   const digest = await crypto.subtle.digest("SHA-256", data);
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -31,4 +34,20 @@ export function dayRangeEpochMs(from: string, to: string, offsetMinutes: number)
 }
 
 export const isValidDay = (value: unknown): value is string =>
-  typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  typeof value === "string" &&
+  /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+  !Number.isNaN(new Date(`${value}T00:00:00Z`).getTime()) &&
+  new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+
+export function boundedInt(value: unknown, fallback: number, min: number, max: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.trunc(parsed)));
+}
+
+export function requireProductionConfig(env: Env): void {
+  if (!isProd(env)) return;
+  if (!env.IP_SALT || !env.SESSION_SECRET || !env.ALLOWED_GITHUB_LOGIN) {
+    throw new Error("Production admin configuration is incomplete");
+  }
+}

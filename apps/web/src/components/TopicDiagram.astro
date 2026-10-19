@@ -1,0 +1,164 @@
+---
+import { topicDiagrams } from "@/data/topic-diagrams";
+
+interface Props {
+  topicId: string;
+  compact?: boolean;
+}
+
+const { topicId, compact = false } = Astro.props;
+const diagram = topicDiagrams[topicId];
+
+if (!diagram) {
+  throw new Error(`Missing topic diagram: ${topicId}`);
+}
+---
+
+<figure class:list={["topic-diagram", compact ? "topic-diagram--compact" : ""]}>
+  <figcaption>
+    <span>解释图</span>
+    <strong>{diagram.title}</strong>
+  </figcaption>
+  <ol class="topic-diagram__flow">
+    {
+      diagram.stages.map((stage, index) => (
+        <li class:list={["topic-stage", `topic-stage--${stage.tone ?? "neutral"}`]}>
+          <span class="topic-stage__index">{String(index + 1).padStart(2, "0")}</span>
+          <strong>{stage.label}</strong>
+          <small>{stage.detail}</small>
+          {index < diagram.stages.length - 1 && <i aria-hidden="true"></i>}
+        </li>
+      ))
+    }
+  </ol>
+  <p>{diagram.caption}</p>
+</figure>
+
+<style is:global>
+  .topic-diagram {
+    margin: 2rem 0;
+    border: 1px solid var(--line-strong);
+    background: color-mix(in srgb, var(--surface) 84%, transparent);
+    padding: clamp(1rem, 2.5vw, 1.5rem);
+  }
+
+  .topic-diagram figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
+    align-items: baseline;
+    border-block-end: 1px solid var(--line);
+    padding-block-end: 0.65rem;
+  }
+
+  .topic-diagram figcaption span {
+    color: var(--embedded);
+    font: 600 0.64rem/1.4 var(--font-mono);
+  }
+
+  .topic-diagram figcaption strong {
+    font-size: 1rem;
+    font-weight: 620;
+  }
+
+  .topic-diagram__flow {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 1.1rem 0 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: stage;
+  }
+
+  .topic-stage {
+    position: relative;
+    display: grid;
+    align-content: start;
+    min-height: 7.6rem;
+    border: 1px solid var(--line);
+    background: var(--surface-strong);
+    padding: 0.75rem;
+  }
+
+  .topic-stage--ai {
+    border-block-start: 3px solid var(--ai);
+  }
+
+  .topic-stage--embedded {
+    border-block-start: 3px solid var(--embedded);
+  }
+
+  .topic-stage__index {
+    color: var(--ink-faint);
+    font: 500 0.62rem/1.4 var(--font-mono);
+  }
+
+  .topic-stage strong {
+    margin-block-start: 0.45rem;
+    font-size: 0.82rem;
+    font-weight: 620;
+  }
+
+  .topic-stage small {
+    margin-block-start: 0.25rem;
+    color: var(--ink-faint);
+    font-size: 0.68rem;
+    line-height: 1.45;
+  }
+
+  .topic-stage i {
+    position: absolute;
+    z-index: 1;
+    inset-block-start: 50%;
+    inset-inline-end: -0.52rem;
+    width: 0.52rem;
+    height: 1px;
+    background: var(--line-strong);
+  }
+
+  .topic-stage i::after {
+    position: absolute;
+    inset-block-start: -0.18rem;
+    inset-inline-end: 0;
+    width: 0.32rem;
+    height: 0.32rem;
+    border-block-start: 1px solid var(--line-strong);
+    border-inline-end: 1px solid var(--line-strong);
+    content: "";
+    transform: rotate(45deg);
+  }
+
+  .topic-diagram > p {
+    margin: 0.8rem 0 0;
+    color: var(--ink-faint);
+    font-size: 0.7rem;
+    line-height: 1.55;
+  }
+
+  .topic-diagram--compact .topic-stage {
+    min-height: 6.6rem;
+  }
+
+  @media (max-width: 760px) {
+    .topic-diagram__flow {
+      grid-template-columns: 1fr;
+      gap: 0.4rem;
+    }
+
+    .topic-stage {
+      min-height: 0;
+    }
+
+    .topic-stage i {
+      inset: auto auto -0.45rem 1.1rem;
+      width: 1px;
+      height: 0.45rem;
+    }
+
+    .topic-stage i::after {
+      inset: auto auto 0 -0.15rem;
+      transform: rotate(135deg);
+    }
+  }
+</style>

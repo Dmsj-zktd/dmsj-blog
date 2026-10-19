@@ -1,278 +1,425 @@
 ---
-import { site } from "@/config/site";
-import { contentModules } from "@/site/content-registry";
-import { themes } from "@/site/themes";
+import { appearanceModes } from "@/site/themes";
+import AudienceSwitch from "@/components/AudienceSwitch.astro";
+import SearchDialog from "@/components/SearchDialog.astro";
 
-const domainNav = contentModules.filter((m) => m.inNav).sort((a, b) => a.order - b.order);
+const path = Astro.url.pathname;
+const nav = [
+  { href: "/frontier/", label: "前沿", active: path.startsWith("/frontier") },
+  { href: "/archive/", label: "笔记", active: path.startsWith("/archive") || path === "/tags/" },
+  { href: "/lab/", label: "实验", active: path.startsWith("/lab") },
+  { href: "/projects/", label: "项目", active: path.startsWith("/projects") },
+  { href: "/about/", label: "关于", active: path.startsWith("/about") },
+];
 ---
 
-<header class="site-header no-print">
+<header class="site-header no-print" data-site-header>
   <div class="shell header-inner">
-    <a class="brand" href="/" aria-label={`${site.name} 首页`}>
-      <span class="brand-mark" aria-hidden="true">D</span>
-      <span class="brand-name">{site.shortName}</span>
+    <a class="brand" href="/">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32">
+          <path d="M5 21h5l3-11 5 16 4-12h5"></path>
+          <circle cx="5" cy="21" r="1.6"></circle>
+          <circle cx="27" cy="14" r="1.6"></circle>
+        </svg>
+      </span>
+      <span class="brand-word">
+        <strong>DMSJ</strong>
+        <span>Signal Lab</span>
+      </span>
     </a>
 
     <nav class="desktop-nav" aria-label="主导航">
-      <a class="nav-link" href="/">首页</a>
-      {domainNav.map((m) => (
-        <a class="nav-link" href={`/${m.key}/`}>{m.label}</a>
+      {nav.map((item) => (
+        <a
+          class:list={["nav-link", item.active ? "is-active" : ""]}
+          href={item.href}
+          aria-current={item.active ? "page" : undefined}
+        >
+          {item.label}
+        </a>
       ))}
-      <a class="nav-link" href="/archive/">归档</a>
-      <a class="nav-link" href="/tags/">标签</a>
-      <a class="nav-link" href="/search/">搜索</a>
-      <a class="nav-link" href="/about/">关于</a>
+      <a class="nav-link nav-link--quiet" href="/tags/">标签</a>
+      <a class="nav-link nav-link--quiet" href="/rss.xml">RSS</a>
     </nav>
 
-    <details class="theme-picker no-print">
-      <summary class="theme-summary" aria-label="主题与外观设置">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-          <path d="M12 3a9 9 0 1 0 0 18c.8 0 1.2-.7.7-1.2-.8-.8-.6-2.1.4-2.7a4.8 4.8 0 0 0 2.4-4.2c0-2.2-1.7-4.4-4.1-4.9" />
-          <circle cx="18.5" cy="5.5" r="1" fill="currentColor" stroke="none" />
-          <circle cx="6.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
-          <circle cx="7" cy="17" r="1" fill="currentColor" stroke="none" />
-        </svg>
-      </summary>
-      <div class="theme-pop">
-        <p class="eyebrow">主题 Theme</p>
-        <div class="theme-list">
-          {themes.map((theme) => (
-            <button type="button" data-action="set-theme" data-value={theme.id} class="theme-item">
-              <span class="theme-dot" data-dot={theme.id} aria-hidden="true"></span>
-              <span>{theme.name}</span>
-            </button>
-          ))}
-        </div>
-        <p class="eyebrow">模式 Mode</p>
-        <div class="mode-list">
-          <button type="button" data-action="set-mode" data-value="light">浅色</button>
-          <button type="button" data-action="set-mode" data-value="dark">深色</button>
-        </div>
-        <p class="theme-hint">未自选时每次访问随机获得主题。</p>
-      </div>
-    </details>
+    <div class="header-tools">
+      <AudienceSwitch compact />
 
-    <details class="mobile-menu no-print">
-      <summary aria-label="打开菜单">菜单</summary>
-      <nav aria-label="移动端导航">
-        <a href="/">首页</a>
-        {domainNav.map((m) => (
-          <a href={`/${m.key}/`}>{m.label}</a>
-        ))}
-        <a href="/archive/">归档</a>
-        <a href="/tags/">标签</a>
-        <a href="/search/">搜索</a>
-        <a href="/about/">关于</a>
-      </nav>
-    </details>
+      <SearchDialog />
+
+      <details class="appearance-menu" data-menu>
+        <summary class="icon-button" aria-label="外观设置" data-appearance-trigger>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2.2M12 19.8V22M2 12h2.2M19.8 12H22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M19.1 4.9l-1.6 1.6M6.5 17.5l-1.6 1.6"></path>
+          </svg>
+        </summary>
+        <div class="appearance-pop">
+          <p class="appearance-pop__title">阅读环境</p>
+          <div class="appearance-list">
+            {appearanceModes.map((mode) => (
+              <button
+                class="appearance-option"
+                type="button"
+                data-set-appearance={mode.id}
+                aria-pressed={mode.id === "auto" ? "true" : "false"}
+              >
+                <span>{mode.label}</span>
+                <small>{mode.description}</small>
+              </button>
+            ))}
+          </div>
+          <label class="contrast-toggle">
+            <span>
+              <strong>高对比</strong>
+              <small>加粗边界与正文对比</small>
+            </span>
+            <input type="checkbox" data-toggle-contrast />
+          </label>
+        </div>
+      </details>
+
+      <details class="mobile-menu" data-menu>
+        <summary class="icon-button" aria-label="打开菜单">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16"></path>
+          </svg>
+        </summary>
+        <nav class="mobile-pop" aria-label="移动导航">
+          <div class="mobile-lens">
+            <AudienceSwitch />
+          </div>
+          {nav.map((item) => (
+            <a
+              class:list={[item.active ? "is-active" : ""]}
+              href={item.href}
+              aria-current={item.active ? "page" : undefined}
+            >
+              {item.label}
+            </a>
+          ))}
+          <a href="/tags/">标签</a>
+          <a href="/search/">搜索页</a>
+          <a href="/rss.xml">RSS</a>
+        </nav>
+      </details>
+    </div>
   </div>
 </header>
 
 <style is:global>
   .site-header {
     position: sticky;
-    top: 0;
-    z-index: 50;
-    background: color-mix(in srgb, var(--bg) 86%, transparent);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--hairline);
+    z-index: 80;
+    inset-block-start: 0;
+    border-block-end: 1px solid var(--line);
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(14px) saturate(1.2);
   }
 
   .header-inner {
     display: flex;
+    min-height: var(--header-height);
     align-items: center;
-    gap: 1rem;
-    min-height: 3.6rem;
+    gap: 1.4rem;
   }
 
   .brand {
     display: inline-flex;
-    align-items: baseline;
-    gap: 0.45rem;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.65rem;
+    color: var(--ink);
     text-decoration: none;
-    color: var(--fg);
-    font-family: var(--font-display);
-    font-weight: 750;
-    letter-spacing: 0.02em;
   }
 
   .brand:hover {
-    color: var(--accent);
+    text-decoration: none;
   }
 
   .brand-mark {
     display: grid;
+    width: 2.2rem;
+    height: 2.2rem;
     place-items: center;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+  }
+
+  .brand-mark svg {
     width: 1.65rem;
-    height: 1.65rem;
-    background: var(--accent);
-    color: #fff;
-    border-radius: 2px;
-    font-size: 0.95rem;
-    align-self: center;
+    fill: none;
+    stroke: var(--ai);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.75;
+  }
+
+  .brand-mark circle {
+    fill: var(--embedded);
+    stroke: none;
+  }
+
+  .brand-word {
+    display: grid;
+    gap: 0.02rem;
+    line-height: 1;
+  }
+
+  .brand-word strong {
+    font-size: 0.93rem;
+    font-weight: 720;
+    letter-spacing: 0.055em;
+  }
+
+  .brand-word span {
+    color: var(--ink-faint);
+    font: 500 0.63rem/1.2 var(--font-mono);
+    letter-spacing: 0.06em;
   }
 
   .desktop-nav {
     display: flex;
     align-items: center;
-    gap: 0.15rem;
-    margin-inline-start: auto;
-    overflow-x: auto;
-    scrollbar-width: none;
+    gap: 0.1rem;
   }
 
   .nav-link {
-    color: var(--fg-soft);
-    font-size: 0.9rem;
-    padding: 0.35rem 0.55rem;
-    border-radius: var(--radius);
-    text-decoration: none;
-    white-space: nowrap;
-  }
-
-  .nav-link:hover {
-    color: var(--fg);
-    background: var(--accent-soft);
-    text-decoration: none;
-  }
-
-  .theme-picker {
     position: relative;
-    margin-inline-start: 0.35rem;
+    padding: 0.55rem 0.68rem;
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+    font-weight: 540;
+    text-decoration: none;
   }
 
-  .theme-summary {
-    list-style: none;
-    cursor: pointer;
-    display: grid;
-    place-items: center;
-    width: 2.1rem;
-    height: 2.1rem;
-    border: 1px solid var(--hairline);
-    border-radius: var(--radius);
-    color: var(--fg-soft);
-  }
-
-  .theme-summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .theme-summary:hover {
-    color: var(--accent);
-    border-color: var(--accent);
-  }
-
-  .theme-pop {
+  .nav-link::after {
     position: absolute;
-    right: 0;
-    top: calc(100% + 0.4rem);
-    width: 15rem;
-    background: var(--bg-elev);
-    border: 1px solid var(--hairline);
-    border-radius: 6px;
-    box-shadow: var(--shadow);
-    padding: 0.85rem;
-    z-index: 60;
+    inset: auto 0.68rem 0.28rem;
+    height: 1px;
+    background: var(--ai);
+    content: "";
+    opacity: 0;
+    transform: scaleX(0.3);
+    transition:
+      opacity 140ms ease,
+      transform 180ms var(--ease-out);
   }
 
-  .theme-list,
-  .mode-list {
+  .nav-link:hover,
+  .nav-link.is-active {
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .nav-link:hover::after,
+  .nav-link.is-active::after {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+
+  .nav-link--quiet {
+    color: var(--ink-faint);
+    font-size: 0.8rem;
+  }
+
+  .header-tools {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-    margin-block: 0.35rem 0.6rem;
-  }
-
-  .theme-item,
-  .mode-list button {
-    border: 1px solid var(--hairline);
-    background: transparent;
-    color: var(--fg);
-    border-radius: 999px;
-    padding: 0.18rem 0.6rem;
-    cursor: pointer;
-    font-size: 0.82rem;
-    display: inline-flex;
+    flex: 0 0 auto;
     align-items: center;
-    gap: 0.3rem;
-  }
-
-  .theme-item:hover,
-  .mode-list button:hover {
-    border-color: var(--accent);
-  }
-
-  .theme-dot {
-    width: 0.65rem;
-    height: 0.65rem;
-    border-radius: 999px;
-    border: 1px solid currentColor;
-  }
-
-  .theme-dot[data-dot="paper"] { background: #e6a15f; }
-  .theme-dot[data-dot="gothic"] { background: #2a2a2a; }
-  .theme-dot[data-dot="blueprint"] { background: #3b7dd8; }
-  .theme-dot[data-dot="telegraph"] { background: #7aa87c; }
-  .theme-dot[data-dot="terminal"] { background: #35c05a; }
-
-  .theme-hint {
-    margin: 0.5rem 0 0;
-    font-size: 0.72rem;
-    color: var(--fg-faint);
-  }
-
-  .mobile-menu {
-    display: none;
+    gap: 0.45rem;
     margin-inline-start: auto;
   }
 
-  .mobile-menu summary {
-    list-style: none;
+  .search-trigger {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.48rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--ink-soft);
+    padding: 0.3rem 0.45rem 0.3rem 0.75rem;
     cursor: pointer;
-    border: 1px solid var(--hairline);
-    border-radius: var(--radius);
-    padding: 0.3rem 0.65rem;
-    color: var(--fg);
-    font-size: 0.9rem;
+    font-size: 0.8rem;
   }
 
+  .search-trigger:hover {
+    border-color: var(--line-strong);
+    color: var(--ink);
+  }
+
+  .search-trigger svg {
+    width: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+  }
+
+  .search-trigger kbd {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--paper);
+    padding: 0.1rem 0.36rem;
+    color: var(--ink-faint);
+    font: 500 0.62rem/1.2 var(--font-mono);
+  }
+
+  .appearance-menu,
+  .mobile-menu {
+    position: relative;
+  }
+
+  .appearance-menu summary,
+  .mobile-menu summary {
+    list-style: none;
+  }
+
+  .appearance-menu summary::-webkit-details-marker,
   .mobile-menu summary::-webkit-details-marker {
     display: none;
   }
 
-  .mobile-menu nav {
+  .appearance-menu summary svg,
+  .mobile-menu summary svg {
+    width: 1.1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 1.7;
+  }
+
+  .appearance-pop,
+  .mobile-pop {
     position: absolute;
-    right: var(--page-pad);
-    top: calc(100% + 0.4rem);
-    background: var(--bg-elev);
-    border: 1px solid var(--hairline);
+    z-index: 90;
+    inset-block-start: calc(100% + 0.6rem);
+    inset-inline-end: 0;
+    width: min(19rem, calc(100vw - 2rem));
+    border: 1px solid var(--line-strong);
+    background: var(--surface-strong);
     box-shadow: var(--shadow);
-    border-radius: 6px;
-    padding: 0.5rem;
+    padding: 0.8rem;
+  }
+
+  .appearance-pop__title {
+    margin: 0 0 0.55rem;
+    color: var(--ink-faint);
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .appearance-list {
     display: grid;
-    min-width: 12rem;
-    z-index: 70;
+    gap: 0.25rem;
   }
 
-  .mobile-menu nav a {
-    color: var(--fg);
+  .appearance-option {
+    display: grid;
+    gap: 0.1rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--ink);
+    padding: 0.5rem 0.55rem;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .appearance-option:hover,
+  .appearance-option[aria-pressed="true"] {
+    border-color: var(--line);
+    background: var(--paper);
+  }
+
+  .appearance-option span {
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .appearance-option small,
+  .contrast-toggle small {
+    color: var(--ink-faint);
+    font-size: 0.7rem;
+  }
+
+  .contrast-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-block-start: 0.55rem;
+    border-block-start: 1px solid var(--line);
+    padding-block-start: 0.65rem;
+    cursor: pointer;
+  }
+
+  .contrast-toggle span {
+    display: grid;
+    gap: 0.08rem;
+  }
+
+  .contrast-toggle strong {
+    font-size: 0.82rem;
+  }
+
+  .contrast-toggle input {
+    width: 1.1rem;
+    height: 1.1rem;
+    accent-color: var(--ai);
+  }
+
+  .mobile-menu {
+    display: none;
+  }
+
+  .mobile-pop {
+    display: grid;
+  }
+
+  .mobile-pop a {
+    padding: 0.68rem 0.7rem;
+    color: var(--ink);
+    font-size: 0.92rem;
     text-decoration: none;
-    padding: 0.4rem 0.7rem;
-    border-radius: var(--radius);
   }
 
-  .mobile-menu nav a:hover {
-    background: var(--accent-soft);
+  .mobile-pop a:hover,
+  .mobile-pop a.is-active {
+    background: var(--ai-soft);
+    text-decoration: none;
   }
 
   @media (max-width: 960px) {
     .desktop-nav,
-    .theme-picker {
+    .search-trigger span,
+    .search-trigger kbd {
       display: none;
     }
+
+    .header-tools > .audience-switch {
+      display: none;
+    }
+
+    .search-trigger {
+      width: 2.75rem;
+      justify-content: center;
+      padding: 0;
+    }
+
     .mobile-menu {
       display: block;
-      position: relative;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .brand-word span {
+      display: none;
+    }
+
+    .header-inner {
+      gap: 0.7rem;
     }
   }
 </style>

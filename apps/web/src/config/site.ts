@@ -1,9 +1,9 @@
 export interface SiteConfig {
   name: string;
   shortName: string;
-  /** 随机金句的兜底展示项（无 JS / SEO 场景） */
+  /** 固定品牌主张；页面不再随机替换，以保证文案与视觉稳定 */
   tagline: string;
-  /** 每次刷新随机展示的站点金句 */
+  /** 可复用的短句素材，不参与运行时随机展示 */
   taglines: string[];
   description: string;
   url: string;
@@ -41,7 +41,7 @@ export interface SiteConfig {
     endpoint: string;
     excludeBots: boolean;
   };
-  defaultTheme: "random" | (string & {});
+  defaultTheme: "auto" | "light" | "dark";
 }
 
 /**
@@ -49,22 +49,22 @@ export interface SiteConfig {
  * 这里的内容会进入 HTML head、RSS、sitemap 与 JSON-LD。
  */
 export const site: SiteConfig = {
-  name: "DMSJ · 工程技术笔记",
+  name: "DMSJ · Signal Lab",
   shortName: "DMSJ",
-  tagline: "万物皆可 Turing，万物皆可 Hack。",
+  tagline: "在硅与推理之间，构建可验证的系统。",
   taglines: [
-    "万物皆可 Turing，万物皆可 Hack。",
-    "在边缘与智能的夹缝中，写点耐人寻味的东西。",
-    "Keep hacking, keep turing, keep curious.",
+    "在硅与推理之间，构建可验证的系统。",
+    "把论文变成可以跑的模型、可以被推翻的结论。",
+    "从 HBM 到 MCU，追问同一条内存层级。",
   ],
-  description: "算法、嵌入式与 LLM/Agent 工程化实践的个人技术博客。",
+  description: "AI 系统、Agent 可靠性与嵌入式工程的研究型技术博客。",
   url: "https://dmsj-blog.pages.dev",
   locale: "zh-CN",
   author: {
     name: "DMSJ",
     login: "Dmsj-zktd",
-    email: "you@example.com",
-    bio: "喜欢千奇百怪 – 总是啥都关注的 边缘开发者  ^~^",
+    email: "",
+    bio: "关注 AI 系统与嵌入式边缘计算，习惯从底层约束反推上层设计。",
     social: [
       {
         id: "github",
@@ -110,5 +110,5 @@ export const site: SiteConfig = {
     endpoint: "/api/track",
     excludeBots: true,
   },
-  defaultTheme: "random",
+  defaultTheme: "auto",
 };
