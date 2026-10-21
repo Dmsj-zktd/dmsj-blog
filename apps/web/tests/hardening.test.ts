@@ -1,4 +1,4 @@
-import { SourceRefSchema, safeContentPath } from "@dmsj/content-model";
+import { draftContentPath, SourceRefSchema, safeContentPath } from "@dmsj/content-model";
 import { describe, expect, it, vi } from "vitest";
 import { hashValue, requireProductionConfig } from "../functions/_shared/crypto";
 import { type Env, isProd } from "../functions/_shared/env";
@@ -13,17 +13,28 @@ const env = {
 
 describe("content path hardening", () => {
   it("accepts canonical Markdown paths", () => {
-    expect(safeContentPath("content/embedded/frontier/pqc-ledger.md")).toBe(
-      "content/embedded/frontier/pqc-ledger.md",
+    expect(safeContentPath("apps/web/content/embedded/frontier/pqc-ledger.md")).toBe(
+      "apps/web/content/embedded/frontier/pqc-ledger.md",
     );
   });
 
   it("rejects traversal, absolute paths, backslashes, and non-content paths", () => {
-    expect(safeContentPath("content/embedded/../../etc/passwd.md")).toBeNull();
-    expect(safeContentPath("/content/embedded/a.md")).toBeNull();
-    expect(safeContentPath("content\\embedded\\a.md")).toBeNull();
-    expect(safeContentPath("content/embedded//a.md")).toBeNull();
+    expect(safeContentPath("apps/web/content/embedded/../../etc/passwd.md")).toBeNull();
+    expect(safeContentPath("/apps/web/content/embedded/a.md")).toBeNull();
+    expect(safeContentPath("apps\\web\\content\\embedded\\a.md")).toBeNull();
+    expect(safeContentPath("apps/web/content/embedded//a.md")).toBeNull();
+    expect(safeContentPath("content/embedded/a.md")).toBeNull();
     expect(safeContentPath("README.md")).toBeNull();
+  });
+
+  it("derives publication paths beneath the Astro content root", () => {
+    expect(
+      draftContentPath({
+        domain: "thoughts",
+        dirs: ["acceptance"],
+        slug: "smoke",
+      }),
+    ).toBe("apps/web/content/thoughts/acceptance/smoke.md");
   });
 });
 

@@ -80,6 +80,7 @@ export const contentDomains: ContentDomain[] = [
 
 export const CONTENT_DOMAINS = DOMAIN_KEYS;
 export const contentDomainSchema = z.enum(DOMAIN_KEYS);
+export const CONTENT_ROOT = "apps/web/content";
 
 export function isDomainKey(value: string): value is DomainKey {
   return DOMAIN_KEYS.includes(value as DomainKey);
@@ -446,11 +447,12 @@ export const PublishedWriteSchema = z.object({
 });
 
 export function draftContentPath(input: Pick<DraftInput, "domain" | "dirs" | "slug">): string {
-  return ["content", input.domain, ...input.dirs, `${input.slug}.md`].join("/");
+  return [CONTENT_ROOT, input.domain, ...input.dirs, `${input.slug}.md`].join("/");
 }
 
 /**
- * Accepts only canonical repository-relative Markdown paths beneath content/.
+ * Accepts only canonical repository-relative Markdown paths beneath
+ * apps/web/content/.
  * Domains are checked against the public registry by callers that know the app.
  */
 export function safeContentPath(value: unknown): string | null {
@@ -458,9 +460,9 @@ export function safeContentPath(value: unknown): string | null {
   const path = value.trim();
   if (!path || path.length > 320 || path.includes("\\") || path.includes("\0")) return null;
   if (path.startsWith("/") || path.includes("//")) return null;
-  if (!/^content\/[a-z0-9-]+\/(?:[a-z0-9-]+\/)*[a-z0-9-]+\.mdx?$/.test(path)) return null;
-  const segments = path.split("/");
-  if (segments.some((segment) => segment === "." || segment === ".." || segment === "")) return null;
+  if (!path.startsWith(`${CONTENT_ROOT}/`)) return null;
+  const relative = path.slice(CONTENT_ROOT.length + 1);
+  if (!/^(?:[a-z0-9-]+\/)*[a-z0-9-]+\.mdx?$/.test(relative)) return null;
   return path;
 }
 

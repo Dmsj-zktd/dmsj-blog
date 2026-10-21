@@ -1,3 +1,4 @@
+import { CONTENT_ROOT } from "@dmsj/content-model";
 import type { SessionUser } from "./auth";
 import type { Env } from "./env";
 
@@ -85,7 +86,7 @@ export class GitHubClient {
     const url = `https://api.github.com/repos/${this.owner()}/${this.repo()}/git/trees/${this.branch()}?recursive=1`;
     const response = await this.request(url);
     const tree = (await response.json()) as { tree: RepoFile[] };
-    return tree.tree.filter((f) => f.type === "blob" && f.path.startsWith("content/"));
+    return tree.tree.filter((f) => f.type === "blob" && f.path.startsWith(`${CONTENT_ROOT}/`));
   }
 
   async getRawFile(path: string): Promise<string> {

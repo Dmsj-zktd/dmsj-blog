@@ -16,7 +16,7 @@
 4. **GitHub token stored as plaintext in KV**
    - Resolution: encrypt with AES-GCM using a key derived from `SESSION_SECRET`; invalid/legacy session data is rejected rather than trusted.
 5. **Repository path abuse**
-   - Resolution: domain allowlist, URL-safe segments, canonical `content/**/*.md(x)` path validation, and an exact file-tree conflict check before publish.
+   - Resolution: domain allowlist, URL-safe segments, canonical `apps/web/content/**/*.md(x)` path validation, and an exact file-tree conflict check before publish.
 6. **Malformed cookie could produce a 500**
    - Resolution: reject malformed percent encoding safely; regression test added.
 7. **NaN, impossible dates, and unbounded page parameters**

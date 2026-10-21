@@ -122,7 +122,7 @@ async function load() {
 }
 
 function humanPath(path: string): string {
-  return path.replace(/^content\//, "").replace(/\.(md|mdx)$/, "");
+  return path.replace(/^apps\/web\/content\//, "").replace(/\.(md|mdx)$/, "");
 }
 
 async function newDraft() {

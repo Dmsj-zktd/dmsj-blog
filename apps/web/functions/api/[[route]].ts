@@ -1,7 +1,9 @@
 import {
+  CONTENT_ROOT,
   contentDomainSchema,
   type DraftInput,
   DraftInputSchema,
+  draftContentPath,
   isPublicDomain,
   safeContentPath,
 } from "@dmsj/content-model";
@@ -509,6 +511,10 @@ function sessionOf(c: Context<AppEnv>): Session | null {
   return c.get("session");
 }
 
+function domainFromContentPath(path: string): string {
+  return path.slice(CONTENT_ROOT.length + 1).split("/")[0] ?? "";
+}
+
 app.get("/api/admin/articles", async (c) => {
   const session = sessionOf(c);
   if (!session) return jsonError(c, "unauthorized", 401);
@@ -798,9 +804,7 @@ app.post("/api/admin/drafts/:id/publish", async (c) => {
     conclusion: metadata.conclusion,
     takeaways: metadata.takeaways ?? [],
   };
-  const path = safeContentPath(
-    `content/${draft.domain}/${draft.dirs.length ? `${draft.dirs.join("/")}/` : ""}${draft.slug}.md`,
-  );
+  const path = safeContentPath(draftContentPath(draft));
   if (!path) return jsonError(c, "invalid_content_path", 400);
   const gh = buildGitHubClient(c.env, session.githubToken, session.user.login);
   try {
@@ -838,7 +842,7 @@ app.post("/api/admin/drafts/:id/publish", async (c) => {
 });
 
 const publishedWriteSchema = z.object({
-  path: z.string().regex(/^content\/[a-z0-9-]+\/.+\.(md|mdx)$/),
+  path: z.string().min(1).max(320),
   sha: z.string().optional(),
   title: z.string().min(1).max(120),
   description: z.string().min(1).max(320),
@@ -849,7 +853,7 @@ const publishedWriteSchema = z.object({
 });
 
 const rawArticleSchema = z.object({
-  path: z.string().regex(/^content\/[a-z0-9-]+\/.+\.(md|mdx)$/),
+  path: z.string().min(1).max(320),
   sha: z.string().optional(),
   content: z.string().min(3).max(600_000),
 });
@@ -863,7 +867,7 @@ app.put("/api/admin/raw-article", async (c) => {
   }
   const data = parsed.data;
   const safePath = safeContentPath(data.path);
-  if (!safePath || !isPublicDomain(safePath.split("/")[1] ?? "")) {
+  if (!safePath || !isPublicDomain(domainFromContentPath(safePath))) {
     return jsonError(c, "invalid_path", 400);
   }
   data.path = safePath;
@@ -874,7 +878,7 @@ app.put("/api/admin/raw-article", async (c) => {
   await gh.putFile(
     data.path,
     data.content,
-    `docs(${data.path.split("/")[1]}): update article`,
+    `docs(${domainFromContentPath(data.path)}): update article`,
     oldSha,
   );
   await writeAudit(c.env, session.user, "UPDATE_ARTICLE", "article", {
@@ -894,7 +898,7 @@ app.put("/api/admin/article", async (c) => {
   }
   const data = parsed.data;
   const safePath = safeContentPath(data.path);
-  if (!safePath || !isPublicDomain(safePath.split("/")[1] ?? "")) {
+  if (!safePath || !isPublicDomain(domainFromContentPath(safePath))) {
     return jsonError(c, "invalid_path", 400);
   }
   data.path = safePath;
@@ -913,7 +917,7 @@ app.put("/api/admin/article", async (c) => {
   await gh.putFile(
     data.path,
     `---\n${yaml}\n---\n\n${data.body.trim()}\n`,
-    `docs(${data.path.split("/")[1]}): update ${data.path}`,
+    `docs(${domainFromContentPath(data.path)}): update ${data.path}`,
     oldSha,
   );
   await writeAudit(c.env, session.user, "UPDATE_ARTICLE", "article", {
@@ -929,7 +933,7 @@ app.get("/api/admin/article", async (c) => {
   if (!session) return jsonError(c, "unauthorized", 401);
   const path = c.req.query("path") ?? "";
   const safePath = safeContentPath(path);
-  if (!safePath || !isPublicDomain(safePath.split("/")[1] ?? "")) {
+  if (!safePath || !isPublicDomain(domainFromContentPath(safePath))) {
     return jsonError(c, "invalid_path", 400);
   }
   const gh = buildGitHubClient(c.env, session.githubToken, session.user.login);
@@ -943,7 +947,7 @@ app.delete("/api/admin/article", async (c) => {
   if (!session) return jsonError(c, "unauthorized", 401);
   const path = c.req.query("path") ?? "";
   const safePath = safeContentPath(path);
-  if (!safePath || !isPublicDomain(safePath.split("/")[1] ?? "")) {
+  if (!safePath || !isPublicDomain(domainFromContentPath(safePath))) {
     return jsonError(c, "invalid_path", 400);
   }
   const gh = buildGitHubClient(c.env, session.githubToken, session.user.login);
