@@ -16,6 +16,7 @@ html[data-theme="light"] {
   --ai: #2457d6;
   --ai-soft: #dde6ff;
   --embedded: #d65a31;
+  --embedded-text: #b44420;
   --embedded-soft: #ffe6dc;
   --success: #16745a;
   --warning: #9a5b00;
@@ -42,6 +43,7 @@ html[data-theme="dark"] {
   --ai: #7da2ff;
   --ai-soft: rgba(69, 113, 235, 0.18);
   --embedded: #ff8a5c;
+  --embedded-text: #ff8a5c;
   --embedded-soft: rgba(214, 90, 49, 0.18);
   --success: #62c9a8;
   --warning: #f0b15f;
@@ -69,6 +71,7 @@ html[data-theme="dark"] {
     --ai: #7da2ff;
     --ai-soft: rgba(69, 113, 235, 0.18);
     --embedded: #ff8a5c;
+    --embedded-text: #ff8a5c;
     --embedded-soft: rgba(214, 90, 49, 0.18);
     --success: #62c9a8;
     --warning: #f0b15f;
@@ -102,6 +105,7 @@ html[data-theme="light"][data-contrast="high"] {
   --line-strong: #000000;
   --ai: #003fbf;
   --embedded: #a52a00;
+  --embedded-text: #a52a00;
   --ai-soft: #e9efff;
   --embedded-soft: #fff0e9;
 }
@@ -118,6 +122,7 @@ html[data-theme="dark"][data-contrast="high"] {
   --line-strong: #ffffff;
   --ai: #8cb3ff;
   --embedded: #ffb088;
+  --embedded-text: #ffb088;
   --ai-soft: #101d38;
   --embedded-soft: #36190f;
 }
@@ -135,6 +140,7 @@ html[data-theme="dark"][data-contrast="high"] {
     --line-strong: #ffffff;
     --ai: #8cb3ff;
     --embedded: #ffb088;
+    --embedded-text: #ffb088;
     --ai-soft: #101d38;
     --embedded-soft: #36190f;
   }
@@ -175,16 +181,25 @@ body {
   min-width: 18rem;
   margin: 0;
   overflow-x: clip;
-  background:
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px), var(--canvas);
-  background-size: 72px 72px;
+  background: transparent;
   color: var(--ink);
   font-family: var(--font-ui);
   font-size: 1rem;
   line-height: 1.65;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  background:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 72px 72px;
+  content: "";
+  pointer-events: none;
 }
 
 body::after {
@@ -549,7 +564,7 @@ a.chip:hover {
 }
 
 .article li::marker {
-  color: var(--embedded);
+  color: var(--embedded-text);
   font-family: var(--font-mono);
 }
 

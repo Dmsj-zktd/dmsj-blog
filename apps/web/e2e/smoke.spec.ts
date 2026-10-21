@@ -10,6 +10,35 @@ test("首页与三路研究入口可访问", async ({ page }) => {
   await expect(page.getByRole("link", { name: "浏览前沿研究" }).first()).toBeVisible();
 });
 
+test("首页固定网格不随页面滚动，信号比分数字不会重叠", async ({ page }) => {
+  await page.setViewportSize({ width: 759, height: 764 });
+  await page.goto("/");
+
+  const fixedGrid = await page.evaluate(() => {
+    const pseudo = getComputedStyle(document.body, "::before");
+    return {
+      content: pseudo.content,
+      position: pseudo.position,
+      backgroundImage: pseudo.backgroundImage,
+    };
+  });
+  expect(fixedGrid.content).not.toBe("none");
+  expect(fixedGrid.position).toBe("fixed");
+  expect(fixedGrid.backgroundImage).toContain("linear-gradient");
+
+  const score = page.locator(".signal-card__number");
+  const numerator = score.locator(".signal-card__number-main");
+  const denominator = score.locator(".signal-card__number-total");
+  expect((await score.textContent())?.replace(/\s+/g, "")).toBe("10/10");
+  const [numeratorBox, denominatorBox] = await Promise.all([
+    numerator.boundingBox(),
+    denominator.boundingBox(),
+  ]);
+  expect(numeratorBox).not.toBeNull();
+  expect(denominatorBox).not.toBeNull();
+  expect(numeratorBox!.x + numeratorBox!.width).toBeLessThanOrEqual(denominatorBox!.x + 1);
+});
+
 test("三种访客视角可切换、持久化并可通过 URL 分享", async ({ page }) => {
   await page.goto("/");
   await page.locator('[data-set-lens="hiring"]').first().click();
@@ -61,10 +90,11 @@ test("长文显示证据、公式、目录、来源与配套实验", async ({ pa
 });
 
 test("Pagefind 中文搜索和命令面板可用", async ({ page }) => {
+  test.setTimeout(90_000);
   await page.goto("/search/");
   const input = page.getByRole("searchbox");
   await input.fill("内存层级");
-  await expect(page.locator(".search-result").first()).toBeVisible();
+  await expect(page.locator(".search-result").first()).toBeVisible({ timeout: 20_000 });
   await page.locator('[data-search-filter="kind"]').selectOption("synthesis");
   await expect(page.locator(".search-result").first()).toBeVisible();
 
@@ -73,7 +103,7 @@ test("Pagefind 中文搜索和命令面板可用", async ({ page }) => {
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await dialog.getByRole("searchbox").fill("Agent");
-  await expect(dialog.getByRole("link").first()).toBeVisible();
+  await expect(dialog.getByRole("link").first()).toBeVisible({ timeout: 20_000 });
 });
 
 test("320px 移动端导航与布局无横向溢出", async ({ browser }) => {

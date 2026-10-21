@@ -63,6 +63,7 @@ const kindLabels = {
 <style is:global>
   .article-card {
     --card-accent: var(--ai);
+    --card-accent-text: var(--ai);
     position: relative;
     display: grid;
     grid-template-columns: 0.75rem minmax(0, 1fr);
@@ -75,6 +76,7 @@ const kindLabels = {
 
   .article-card--silicon {
     --card-accent: var(--embedded);
+    --card-accent-text: var(--embedded-text);
   }
 
   .article-card:hover {
@@ -117,7 +119,7 @@ const kindLabels = {
   }
 
   .article-card__kind {
-    color: var(--card-accent);
+    color: var(--card-accent-text);
   }
 
   .article-card__title {

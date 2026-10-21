@@ -71,7 +71,10 @@ const topicCounts = Object.fromEntries(
               <span class="mono-label">Signal status</span>
               <span class="signal-card__live"><i></i>INDEXED</span>
             </div>
-            <p class="signal-card__number">10<span>/10</span></p>
+            <p class="signal-card__number">
+              <span class="signal-card__number-main">10</span>
+              <span class="signal-card__number-total">/10</span>
+            </p>
             <p class="signal-card__label">前沿主题已建立研究档案</p>
             <div class="signal-card__bars" aria-hidden="true">
               {[38, 62, 41, 84, 55, 71, 34, 92, 63, 48, 78, 58].map((height) => (
@@ -350,16 +353,25 @@ const topicCounts = Object.fromEntries(
   }
 
   .signal-card__number {
+    display: flex;
+    align-items: baseline;
+    gap: 0.06em;
     margin: 1.2rem 0 0;
     font-size: clamp(3.4rem, 6vw, 5.3rem);
     font-weight: 620;
-    letter-spacing: -0.075em;
     line-height: 0.8;
   }
 
-  .signal-card__number span {
+  .signal-card__number-main {
+    letter-spacing: -0.075em;
+  }
+
+  .signal-card__number-total {
     color: var(--ink-faint);
     font-size: 0.3em;
+    letter-spacing: 0;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   .signal-card__label {
@@ -447,7 +459,7 @@ const topicCounts = Object.fromEntries(
 
   .feature-dispatch__index {
     align-self: start;
-    color: var(--embedded);
+    color: var(--embedded-text);
     font: 0.72rem var(--font-mono);
   }
 
@@ -553,7 +565,7 @@ const topicCounts = Object.fromEntries(
 
   .synthesis-card > span,
   .synthesis-card > strong {
-    color: var(--embedded);
+    color: var(--embedded-text);
     font: 0.66rem/1.5 var(--font-mono);
   }
 

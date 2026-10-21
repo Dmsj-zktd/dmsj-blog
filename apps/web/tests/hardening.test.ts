@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { draftContentPath, SourceRefSchema, safeContentPath } from "@dmsj/content-model";
 import { describe, expect, it, vi } from "vitest";
 import { hashValue, requireProductionConfig } from "../functions/_shared/crypto";
@@ -56,6 +57,24 @@ describe("production fail-closed configuration", () => {
   it("allows local development without production secrets", async () => {
     const local = { ...env, ENVIRONMENT: "development" } as Env;
     expect(await hashValue(local, "127.0.0.1")).toHaveLength(64);
+  });
+});
+
+describe("cache header policy", () => {
+  it("caches fingerprinted assets while leaving route HTML revalidatable", async () => {
+    const headers = await readFile(new URL("../public/_headers", import.meta.url), "utf8");
+    expect(headers).toMatch(
+      /\/_astro\/\*\r?\n\s+Cache-Control: public, max-age=31536000, immutable/,
+    );
+    expect(headers).toMatch(
+      /\/admin\/assets\/\*\r?\n\s+Cache-Control: public, max-age=31536000, immutable/,
+    );
+    expect(headers).toMatch(
+      /\/pagefind\/\*\r?\n\s+Cache-Control: public, max-age=3600, stale-while-revalidate=86400/,
+    );
+    expect(headers).toMatch(
+      /\/pagefind\/fragment\/\*\r?\n\s+Cache-Control: public, max-age=31536000, immutable/,
+    );
   });
 });
 
