@@ -32,3 +32,19 @@ for (const target of pages) {
     });
   }
 }
+
+test("@visual home dark grid remains visible at 759px", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "Visual baselines are captured in Chromium.");
+  test.skip(
+    Boolean(process.env.CI),
+    "Visual baselines are platform-specific and are refreshed locally before release.",
+  );
+  await page.setViewportSize({ width: 759, height: 764 });
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  await page.goto("/");
+  await expect(page.locator(".home-hero")).toHaveScreenshot("home-grid-dark-759.png", {
+    animations: "disabled",
+    caret: "hide",
+    maxDiffPixelRatio: 0.02,
+  });
+});

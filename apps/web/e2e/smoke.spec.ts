@@ -15,15 +15,22 @@ test("首页固定网格不随页面滚动，信号比分数字不会重叠", as
   await page.goto("/");
 
   const fixedGrid = await page.evaluate(() => {
+    const body = getComputedStyle(document.body);
     const pseudo = getComputedStyle(document.body, "::before");
     return {
+      bodyBackground: body.backgroundColor,
+      bodyIsolation: body.isolation,
       content: pseudo.content,
       position: pseudo.position,
+      zIndex: pseudo.zIndex,
       backgroundImage: pseudo.backgroundImage,
     };
   });
+  expect(fixedGrid.bodyIsolation).toBe("isolate");
+  expect(fixedGrid.bodyBackground).not.toBe("rgba(0, 0, 0, 0)");
   expect(fixedGrid.content).not.toBe("none");
   expect(fixedGrid.position).toBe("fixed");
+  expect(Number(fixedGrid.zIndex)).toBeLessThan(0);
   expect(fixedGrid.backgroundImage).toContain("linear-gradient");
 
   const score = page.locator(".signal-card__number");

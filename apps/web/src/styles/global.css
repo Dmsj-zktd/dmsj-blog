@@ -24,7 +24,7 @@ html[data-theme="light"] {
   --selection: rgba(36, 87, 214, 0.2);
   --code-bg: #e8eeed;
   --code-fg: #172129;
-  --grid-line: rgba(12, 17, 23, 0.055);
+  --grid-line: rgba(12, 17, 23, 0.075);
   --shadow: 0 18px 50px rgba(18, 30, 34, 0.09);
   --shadow-tight: 0 6px 18px rgba(18, 30, 34, 0.07);
 }
@@ -51,7 +51,7 @@ html[data-theme="dark"] {
   --selection: rgba(125, 162, 255, 0.26);
   --code-bg: #0c1219;
   --code-fg: #d8e2e8;
-  --grid-line: rgba(215, 230, 238, 0.05);
+  --grid-line: rgba(215, 230, 238, 0.085);
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.38);
   --shadow-tight: 0 8px 22px rgba(0, 0, 0, 0.28);
 }
@@ -79,7 +79,7 @@ html[data-theme="dark"] {
     --selection: rgba(125, 162, 255, 0.26);
     --code-bg: #0c1219;
     --code-fg: #d8e2e8;
-    --grid-line: rgba(215, 230, 238, 0.05);
+    --grid-line: rgba(215, 230, 238, 0.085);
     --shadow: 0 20px 60px rgba(0, 0, 0, 0.38);
     --shadow-tight: 0 8px 22px rgba(0, 0, 0, 0.28);
   }
@@ -181,7 +181,8 @@ body {
   min-width: 18rem;
   margin: 0;
   overflow-x: clip;
-  background: transparent;
+  isolation: isolate;
+  background: var(--canvas);
   color: var(--ink);
   font-family: var(--font-ui);
   font-size: 1rem;
@@ -198,19 +199,6 @@ body::before {
     linear-gradient(var(--grid-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 72px 72px;
-  content: "";
-  pointer-events: none;
-}
-
-body::after {
-  position: fixed;
-  z-index: -1;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--canvas) 60%, transparent),
-    var(--canvas) 78%
-  );
   content: "";
   pointer-events: none;
 }
