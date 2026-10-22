@@ -239,3 +239,16 @@
   亮色/暗色网格线分别提高到 7.5%/8.5%。新增 759px 暗色视觉基线，防止再次出现“样式存在但视觉消失”。
 - 流程：所有修改类回归留在本地；部署后只检查首页、一个指纹资源、Pagefind 和缓存头，避免用生产流量做
   重复 E2E、视觉矩阵或爬取并污染缓存命中率。
+
+## 2026-10-22 依赖安全清零
+
+- 现象：GitHub 默认分支提示 14 个 Dependabot 告警；完整 npm 审计展开为 19 条受影响记录，
+  涉及 `undici`、`fast-uri`、`Vite` 和 `Vitest/@vitest/mocker`。
+- 根因：Wrangler/Miniflare 的传递 `undici@7.29.0`、Astro 校验链中的 `fast-uri@3.1.7`、
+  `Vite@8.2.2`，以及 `Vitest@5.0.0` 自带的旧 mocker 均低于修复版本。
+- 解决：`undici` 固定到 7.29.1，`fast-uri` 固定到 3.1.8，Vitest 升级到 5.0.5；
+  Vite 统一到供应链冷静期内的安全补丁 8.2.4，避免同时存在多个 Vite 版本。
+  TypeScript 从预发布 `6.0.0-beta` 升级到稳定 `6.0.3`，消除 Astro peer 不匹配。
+- 结果：完整审计与生产依赖审计均为 0；`pnpm peers check` 无问题；离线 frozen lockfile
+  校验通过。Lint、类型检查、39 项单测、155 页构建、19 项视觉、42 项 Chromium/WebKit E2E
+  与性能预算全部通过。

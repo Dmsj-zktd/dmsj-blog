@@ -13,6 +13,7 @@ allowBuilds:
   "@biomejs/biome": true
 
 overrides:
+  "undici@>=7.0.0 <7.29.1": 7.29.1
   "undici@>=8.0.0 <8.10.2": 8.10.2
   "devalue@<=5.9.2": 5.9.3
   "http-cache-semantics@<=4.2.0": 4.3.0
@@ -20,5 +21,7 @@ overrides:
   "smol-toml@<=1.8.0": 1.9.1
   "katex@<0.18.2": 0.18.5
   "sharp@<0.35.5": 0.35.5
+  "vite@>=8.2.0 <8.4.0": 8.2.4
+  "fast-uri@>=3.0.0 <3.1.8": 3.1.8
 
 verifyDepsBeforeRun: false
