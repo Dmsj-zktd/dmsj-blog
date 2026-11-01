@@ -33,7 +33,7 @@ jobs:
       - name: Performance budgets
         run: pnpm budgets
       - name: Upload static build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-dist
           path: apps/web/dist
