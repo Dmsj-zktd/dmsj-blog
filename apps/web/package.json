@@ -20,7 +20,7 @@
     "@fontsource-variable/newsreader": "^5.2.8",
     "astro": "^7.3.1",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.13.7",
+    "hono": "^4.13.16",
     "katex": "^0.18.5",
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
