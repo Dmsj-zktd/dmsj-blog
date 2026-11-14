@@ -18,7 +18,7 @@
     "@astrojs/mdx": "^8.0.0",
     "@fontsource-variable/instrument-sans": "^5.2.8",
     "@fontsource-variable/newsreader": "^5.2.8",
-    "astro": "^7.3.1",
+    "astro": "^7.4.7",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.13.7",
     "katex": "^0.18.5",
